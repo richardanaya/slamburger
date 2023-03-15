@@ -74,66 +74,62 @@ pub unsafe fn get_grey_scale_len() -> usize {
     VEC_GRAYSCALE_LEN
 }
 
-pub fn get_image_fast_keypoints(img: &[u8], width: usize, height: usize) -> Vec<KeyPoint> {
+pub fn get_image_fast_keypoints(img: &mut [u8], width: usize, height: usize) -> Vec<KeyPoint> {
     let greyscale = rgb_to_grayscale(img, width, height);
-    let blurred_img = greyscale_gaussian_blur(&greyscale, width, height, 2.0);
+    let blurred_img = greyscale_gaussian_blur(&greyscale, width, height);
     let threshold: u8 = 30;
     let keypoints = fast_keypoints(&blurred_img, width, height, threshold);
     compute_orientations(&blurred_img, width, &keypoints)
 }
 
-pub fn rgb_to_grayscale(img: &[u8], width: usize, height: usize) -> Vec<u8> {
-    (0..height)
-        .flat_map(|y| {
-            (0..width).map(move |x| {
-                let idx = 4 * (y * width + x);
-                let r = img[idx] as f32;
-                let g = img[idx + 1] as f32;
-                let b = img[idx + 2] as f32;
-                (0.299 * r + 0.587 * g + 0.114 * b) as u8
-
-                // why these numbers?
-                // https://en.wikipedia.org/wiki/Grayscale#Converting_color_to_grayscale
-            })
-        })
-        .collect()
-}
-
-pub fn greyscale_gaussian_blur(img: &[u8], width: usize, height: usize, sigma: f32) -> Vec<u8> {
-    let kernel_size = (6.0 * sigma).ceil() as i32;
-    let mut kernel = vec![0.0; (2 * kernel_size + 1) as usize];
-
-    let mut sum = 0.0;
-    for i in -kernel_size..=kernel_size {
-        let val = (-0.5 * (i as f32).powi(2) / sigma.powi(2)).exp();
-        kernel[(i + kernel_size) as usize] = val;
-        sum += val;
-    }
-
-    // Normalize the kernel
-    kernel.iter_mut().for_each(|v| *v /= sum);
-
-    let mut blurred = vec![0u8; img.len()];
-
-    // Apply the Gaussian kernel horizontally and vertically
+pub fn rgb_to_grayscale<'a>(img: &'a mut [u8], width: usize, height: usize) -> &'a [u8] {
     for y in 0..height {
         for x in 0..width {
-            let mut val_x = 0.0;
-            let mut val_y = 0.0;
+            let idx = 4 * (y * width + x);
+            let r = img[idx] as f32;
+            let g = img[idx + 1] as f32;
+            let b = img[idx + 2] as f32;
+            let g = (0.299 * r + 0.587 * g + 0.114 * b) as u8;
+            img[y * width + x] = g;
+        }
+    }
+    &img[0..(width * height)]
+}
 
-            for k in -kernel_size..=kernel_size {
-                let idx_x = (x as i32 + k).max(0).min(width as i32 - 1) as usize;
-                let idx_y = (y as i32 + k).max(0).min(height as i32 - 1) as usize;
+pub fn greyscale_gaussian_blur(img: &[u8], width: usize, height: usize) -> Vec<u8> {
+    const KERNEL_SIZE: usize = 5;
+    const KERNEL: [f32; KERNEL_SIZE] = [0.06136, 0.24477, 0.38774, 0.24477, 0.06136];
 
-                val_x += img[y * width + idx_x] as f32 * kernel[(k + kernel_size) as usize];
-                val_y += img[idx_y * width + x] as f32 * kernel[(k + kernel_size) as usize];
+    let mut output = vec![0u8; img.len()];
+    let mut buffer = vec![0f32; width * height];
+
+    // Perform horizontal blur
+    for y in 0..height {
+        for x in 0..width {
+            let mut sum = 0.0;
+            for i in 0..KERNEL_SIZE {
+                let index =
+                    (x as i32 - 2 + i as i32).clamp(0, width as i32 - 1) as usize + y * width;
+                sum += KERNEL[i] * img[index] as f32;
             }
-
-            blurred[y * width + x] = ((val_x + val_y) / 2.0) as u8;
+            buffer[x + y * width] = sum;
         }
     }
 
-    blurred
+    // Perform vertical blur
+    for y in 0..height {
+        for x in 0..width {
+            let mut sum = 0.0;
+            for i in 0..KERNEL_SIZE {
+                let index =
+                    x + (y as i32 - 2 + i as i32).clamp(0, height as i32 - 1) as usize * width;
+                sum += KERNEL[i] * buffer[index];
+            }
+            output[x + y * width] = sum.round() as u8;
+        }
+    }
+
+    output
 }
 
 fn is_corner(p: u8, circle: &[u8], threshold: u8) -> bool {
@@ -154,27 +150,27 @@ fn is_corner(p: u8, circle: &[u8], threshold: u8) -> bool {
     count + consecutive >= 9
 }
 
-fn fast_keypoints(img: &[u8], width: usize, height: usize, threshold: u8) -> Vec<(usize, usize)> {
-    let offsets = [
-        (-3, 0),
-        (0, 3),
-        (3, 0),
-        (0, -3),
-        (-1, 3),
-        (1, 3),
-        (3, 1),
-        (3, -1),
-        (1, -3),
-        (-1, -3),
-        (-3, 1),
-        (-3, -1),
-    ];
+const OFFSETS: [(i32, i32); 12] = [
+    (-3, 0),
+    (0, 3),
+    (3, 0),
+    (0, -3),
+    (-1, 3),
+    (1, 3),
+    (3, 1),
+    (3, -1),
+    (1, -3),
+    (-1, -3),
+    (-3, 1),
+    (-3, -1),
+];
 
+fn fast_keypoints(img: &[u8], width: usize, height: usize, threshold: u8) -> Vec<(usize, usize)> {
     let mut keypoints = Vec::new();
     for y in 3..(height - 3) {
         for x in 3..(width - 3) {
             let p = img[y * width + x];
-            let circle: Vec<u8> = offsets
+            let circle: Vec<u8> = OFFSETS
                 .iter()
                 .map(|&(dx, dy)| img[(y as i32 + dy) as usize * width + (x as i32 + dx) as usize])
                 .collect();
@@ -184,7 +180,6 @@ fn fast_keypoints(img: &[u8], width: usize, height: usize, threshold: u8) -> Vec
             }
         }
     }
-
     keypoints
 }
 
