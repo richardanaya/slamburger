@@ -1,0 +1,8 @@
+[package]
+name = "slamburger"
+version = "0.0.0"
+edition = "2021"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
