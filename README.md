@@ -1,5 +1,7 @@
 # [in-progress] Slamburger
 
+This repo is meant to be an extremely teachable codebase for how to do SLAM.  It's also meant to provide a library in WebAssembly.
+
 TODO
 - [X] Greyscale and blur image
 - [X] Identify image feature keypoints with orientation
