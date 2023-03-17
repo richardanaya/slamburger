@@ -1,4 +1,4 @@
-# [in-progress] Slamburger
+# 🍔 Slamburger [in-progress]
 
 This repo is meant to be an extremely teachable codebase for how to do SLAM.  It's also meant to provide a library in WebAssembly.
 
