@@ -18,59 +18,83 @@
     },
   });
 
-  // load image "door.jpg" and put onto canvas and resize canvas to image size
-  const image = new Image();
-  image.src = "coffee.png";
-  image.onload = function () {
-    const canvas = document.querySelector("canvas");
-    const ctx = canvas.getContext("2d");
-    canvas.width = image.width;
-    canvas.height = image.height;
-    ctx.drawImage(image, 0, 0);
-    const imageData = ctx.getImageData(0, 0, image.width, image.height);
-    const data = imageData.data;
+  // watch webcamera and put onto canvas
+  const video = document.querySelector("video");
+  const canvas = document.querySelector("canvas");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  const constraints = {
+    video: {
+      width: 640,
+      height: 480,
+    },
+  };
+  const stream = await navigator.mediaDevices.getUserMedia(constraints);
+  video.srcObject = stream;
+  video.onloadedmetadata = function (e) {
+    video.play();
+  };
+  video.onplay = function () {
+    const run = function () {
+      // get video size
+      const video = document.querySelector("video");
 
-    let ptr = wasmInstance.instance.exports.allocate_vec(data.length);
-    // copy data to wasm memory
-    const wasmMemory = new Uint8Array(
-      wasmInstance.instance.exports.memory.buffer
-    );
-    wasmMemory.set(data, ptr);
+      const width = video.videoWidth;
+      const height = video.videoHeight;
 
-    console.time();
-    let keypointLen = wasmInstance.instance.exports.calculate(
-      image.width,
-      image.height
-    );
-    console.timeEnd();
+      if (width === 0 || height === 0) {
+        return;
+      }
 
-    let keypointPtr = wasmInstance.instance.exports.get_keypoints();
-    let keypointData = new Float32Array(
-      wasmInstance.instance.exports.memory.buffer,
-      keypointPtr,
-      keypointLen * 3
-    );
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(video, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
 
-    ctx.globalAlpha = 0.5;
-    ctx.strokeStyle = "green";
-    for (let i = 0; i < keypointLen; i++) {
-      let x = keypointData[i * 3];
-      let y = keypointData[i * 3 + 1];
-      let orientation = keypointData[i * 3 + 2];
-
-      // draw keypoint
-      ctx.beginPath();
-      ctx.arc(x, y, 5, 0, 2 * Math.PI);
-      ctx.stroke();
-
-      // draw orientation
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(
-        x + 10 * Math.cos(orientation),
-        y + 10 * Math.sin(orientation)
+      let ptr = wasmInstance.instance.exports.allocate_vec(data.length);
+      // copy data to wasm memory
+      const wasmMemory = new Uint8Array(
+        wasmInstance.instance.exports.memory.buffer
       );
-      ctx.stroke();
-    }
+      wasmMemory.set(data, ptr);
+
+      console.time();
+      let keypointLen = wasmInstance.instance.exports.calculate(
+        canvas.width,
+        canvas.height
+      );
+      console.timeEnd();
+
+      let keypointPtr = wasmInstance.instance.exports.get_keypoints();
+      let keypointData = new Float32Array(
+        wasmInstance.instance.exports.memory.buffer,
+        keypointPtr,
+        keypointLen * 3
+      );
+
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = "green";
+      for (let i = 0; i < keypointLen; i++) {
+        let x = keypointData[i * 3];
+        let y = keypointData[i * 3 + 1];
+        let orientation = keypointData[i * 3 + 2];
+
+        // draw keypoint
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.stroke();
+
+        // draw orientation
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(
+          x + 10 * Math.cos(orientation),
+          y + 10 * Math.sin(orientation)
+        );
+        ctx.stroke();
+      }
+      requestAnimationFrame(run);
+    };
+    requestAnimationFrame(run);
   };
 })();
