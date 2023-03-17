@@ -1,10 +1,4 @@
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct KeyPoint {
-    pub x: f32,
-    pub y: f32,
-    pub orientation: f32,
-}
+use crate::common::KeyPoint;
 
 fn is_corner(p: u8, circle: &[u8], threshold: u8) -> bool {
     let mut count = 0;

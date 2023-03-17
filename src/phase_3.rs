@@ -1,8 +1,6 @@
-use crate::phase_2::KeyPoint;
+use crate::common::{Descriptor, KeyPoint};
 use crate::rand::*;
 use std::iter;
-
-pub struct Descriptor(pub Vec<u8>);
 
 pub fn compute_brief_descriptors(
     image: &[u8],

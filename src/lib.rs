@@ -2,9 +2,12 @@ use std::alloc::{alloc, dealloc, Layout};
 use std::slice;
 mod phase_1;
 mod phase_2;
-use phase_2::KeyPoint;
-use phase_3::Descriptor;
+use common::Descriptor;
+use common::KeyPoint;
+mod common;
 mod phase_3;
+mod phase_4;
+mod phase_5;
 mod rand;
 
 static mut VEC_PTR: *mut u8 = 0 as *mut u8;
@@ -43,7 +46,10 @@ static mut VEC_KEYPOINTS_LEN: usize = 0;
 pub unsafe fn calculate(width: usize, height: usize) -> usize {
     let slice = slice::from_raw_parts_mut(VEC_PTR, VEC_LEN);
 
-    let (keypoints, _) = get_keypoints_with_descriptors(slice, width, height);
+    let (keypoints, descriptors) = get_keypoints_with_descriptors_from_image(slice, width, height);
+
+    let matched_keypoints =
+        phase_4::match_features(&keypoints, &descriptors, &keypoints, &descriptors, 32);
 
     let layout = Layout::array::<KeyPoint>(keypoints.len()).unwrap();
     let ptr = alloc(layout) as *mut KeyPoint;
@@ -72,7 +78,7 @@ pub unsafe fn get_grey_scale_len() -> usize {
     VEC_GRAYSCALE_LEN
 }
 
-pub fn get_keypoints_with_descriptors(
+pub fn get_keypoints_with_descriptors_from_image(
     img: &mut [u8],
     width: usize,
     height: usize,
