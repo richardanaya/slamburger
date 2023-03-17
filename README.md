@@ -7,7 +7,7 @@ TODO
 - [X] Identify image feature keypoints with orientation
 - [X] Calculate BREIF descriptors per keypoint
 - [ ] Identify similar keypoints using hamilton distance
-- [ ] Calculate transform
+- [ ] Calculate 3D transform of movement between two images
 - [ ] Try to generate a 3D map ...
 
 
