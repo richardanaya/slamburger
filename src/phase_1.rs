@@ -54,3 +54,108 @@ pub fn greyscale_gaussian_blur(img: &[u8], width: usize, height: usize) -> Vec<u
 
     output
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rgb_to_grayscale() {
+        let input_image: [u8; 12] = [
+            255, 0, 0, 255, // Red
+            0, 255, 0, 255, // Green
+            0, 0, 255, 255, // Blue
+        ];
+
+        let expected_output: Vec<u8> = vec![
+            76,  // Red
+            149, // Green
+            29,  // Blue
+        ];
+
+        let output = rgb_to_grayscale(&input_image, 3, 1);
+        assert_eq!(output, expected_output);
+    }
+
+    #[test]
+    fn test_rgb_to_grayscale_empty_image() {
+        let input_image: [u8; 0] = [];
+        let expected_output: Vec<u8> = vec![];
+        let output = rgb_to_grayscale(&input_image, 0, 0);
+        assert_eq!(output, expected_output);
+    }
+
+    #[test]
+    fn test_greyscale_gaussian_blur() {
+        let input_image: [u8; 15] = [
+            200, 200, 200, 200, 200, // Row 1
+            100, 100, 100, 100, 100, // Row 2
+            50, 50, 50, 50, 50, // Row 3
+        ];
+
+        let expected_output: Vec<u8> = vec![
+            166, 166, 166, 166, 166, 115, 115, 115, 115, 115, 71, 71, 71, 71, 71,
+        ];
+
+        let output = greyscale_gaussian_blur(&input_image, 5, 3);
+        assert_eq!(output, expected_output);
+    }
+
+    #[test]
+    fn test_greyscale_gaussian_blur_empty_image() {
+        let input_image: [u8; 0] = [];
+        let expected_output: Vec<u8> = vec![];
+        let output = greyscale_gaussian_blur(&input_image, 0, 0);
+        assert_eq!(output, expected_output);
+    }
+    #[test]
+    fn test_rgb_to_grayscale_black_and_white() {
+        let input_image: [u8; 8] = [
+            0, 0, 0, 255, // Black
+            255, 255, 255, 255, // White
+        ];
+
+        let expected_output: Vec<u8> = vec![
+            0,   // Black
+            255, // White
+        ];
+
+        let output = rgb_to_grayscale(&input_image, 2, 1);
+        assert_eq!(output, expected_output);
+    }
+
+    #[test]
+    fn test_rgb_to_grayscale_multiple_rows() {
+        let input_image: [u8; 24] = [
+            255, 0, 0, 255, // Red
+            0, 255, 0, 255, // Green
+            255, 255, 0, 255, // Yellow
+            0, 0, 255, 255, // Blue
+            255, 0, 255, 255, // Magenta
+            0, 255, 255, 255, // Cyan
+        ];
+
+        let expected_output: Vec<u8> = vec![76, 149, 225, 29, 105, 178];
+
+        let output = rgb_to_grayscale(&input_image, 3, 2);
+        assert_eq!(output, expected_output);
+    }
+
+    #[test]
+    fn test_greyscale_gaussian_blur_single_pixel() {
+        let input_image: [u8; 1] = [128];
+        let expected_output: Vec<u8> = vec![128];
+        let output = greyscale_gaussian_blur(&input_image, 1, 1);
+        assert_eq!(output, expected_output);
+    }
+
+    #[test]
+    fn test_greyscale_gaussian_blur_uniform_image() {
+        let input_image: [u8; 9] = [128, 128, 128, 128, 128, 128, 128, 128, 128];
+
+        let expected_output: Vec<u8> = vec![128, 128, 128, 128, 128, 128, 128, 128, 128];
+
+        let output = greyscale_gaussian_blur(&input_image, 3, 3);
+        assert_eq!(output, expected_output);
+    }
+}
