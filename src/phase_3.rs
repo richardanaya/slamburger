@@ -94,6 +94,10 @@ fn rotate_point(x: f32, y: f32, angle: f32) -> (f32, f32) {
     (x * cos_angle - y * sin_angle, x * sin_angle + y * cos_angle)
 }
 
+/****************/
+/*  UNIT TESTS  */
+/****************/
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -156,6 +160,75 @@ mod tests {
             Descriptor(vec![0b0000_0000]),
             Descriptor(vec![0b0010_1000]),
             Descriptor(vec![0b0011_0000]),
+        ];
+
+        let actual_descriptors = compute_brief_descriptors(
+            &image,
+            width,
+            height,
+            &[
+                KeyPoint {
+                    x: 1.0,
+                    y: 1.0,
+                    orientation: 0.0,
+                },
+                KeyPoint {
+                    x: 2.0,
+                    y: 2.0,
+                    orientation: 0.0,
+                },
+                KeyPoint {
+                    x: 0.0,
+                    y: 0.0,
+                    orientation: 0.0,
+                },
+                KeyPoint {
+                    x: 0.0,
+                    y: 2.0,
+                    orientation: 0.0,
+                },
+                KeyPoint {
+                    x: 2.0,
+                    y: 0.0,
+                    orientation: 0.0,
+                },
+            ],
+            &sampling_pattern,
+        );
+
+        assert_eq!(expected_descriptors, actual_descriptors);
+
+        // now lets double the sampling to make sure descriptors can go over 8 bits
+
+        let image = vec![
+            1, 2, 3, //
+            4, 5, 6, //
+            7, 8, 9, //
+        ];
+        let width = 3;
+        let height = 3;
+        let sampling_pattern = vec![
+            ((0.0, 0.0), (0.0, 1.0)),
+            ((0.0, 0.0), (1.0, 0.0)),
+            ((0.0, 0.0), (1.0, 1.0)),
+            ((0.0, 0.0), (0.0, -1.0)),
+            ((0.0, 0.0), (-1.0, 0.0)),
+            ((0.0, 0.0), (-1.0, -1.0)),
+            ((0.0, 0.0), (0.0, 1.0)),
+            ((0.0, 0.0), (1.0, 0.0)),
+            ((0.0, 0.0), (1.0, 1.0)),
+            ((0.0, 0.0), (0.0, -1.0)),
+            ((0.0, 0.0), (-1.0, 0.0)),
+            ((0.0, 0.0), (-1.0, -1.0)),
+        ];
+
+        let expected_descriptors = vec![
+            // please note that we clamp the coordinates to the image boundaries which is why these descriptor is what it is
+            Descriptor(vec![0b0011_1000, 0b0000_1110]),
+            Descriptor(vec![0b0011_1000, 0b0000_1110]),
+            Descriptor(vec![0b0000_0000, 0b0000_0000]),
+            Descriptor(vec![0b0010_1000, 0b0000_1010]),
+            Descriptor(vec![0b0011_0000, 0b0000_1100]),
         ];
 
         let actual_descriptors = compute_brief_descriptors(
