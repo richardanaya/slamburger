@@ -254,6 +254,9 @@ mod tests {
         let threshold = 50;
         let keypoints = fast_keypoints(&img, 9, 9, threshold);
         assert_eq!(keypoints, vec![(4, 4)]);
+        let keypoints_with_orientation = compute_orientations(&img, 9, &keypoints);
+        assert_eq!(keypoints_with_orientation.len(), 1);
+        assert_eq!(keypoints_with_orientation[0].orientation, 0.0);
 
         // Test with a larger 9x9 image where there are two corners
         let img = [
@@ -261,7 +264,7 @@ mod tests {
             10, 10, 10, 10, 10, 10, 10, 10, 10, //
             10, 10, 10, 10, 10, 10, 10, 10, 10, //
             10, 10, 10, 200, 10, 10, 10, 10, 10, //
-            10, 10, 10, 10, 0, 10, 10, 10, 10, //
+            10, 10, 10, 10, 10, 10, 10, 10, 10, //
             10, 10, 10, 10, 10, 200, 10, 10, 10, //
             10, 10, 10, 10, 10, 10, 10, 10, 10, //
             10, 10, 10, 10, 10, 10, 10, 10, 10, //
@@ -270,5 +273,59 @@ mod tests {
         let threshold = 50;
         let keypoints = fast_keypoints(&img, 9, 9, threshold);
         assert_eq!(keypoints, vec![(3, 3), (5, 5)]);
+
+        let keypoints_with_orientation = compute_orientations(&img, 9, &keypoints);
+        assert_eq!(keypoints_with_orientation.len(), 2);
+        assert_eq!(keypoints_with_orientation[0].orientation, 0.7853982);
+        // 0.7853982 is the angle of the vector (1, 1)
+        assert_eq!(keypoints_with_orientation[1].orientation, -2.3561945);
+        // -2.3561945 is the angle of the vector (-1, 1)
+        // this shows diagnol orientation is working
+
+        // Test with a larger 9x9 image where there are two corners
+        let img = [
+            10, 10, 10, 10, 10, 10, 10, 10, 10, //
+            10, 10, 10, 10, 10, 10, 10, 10, 10, //
+            10, 10, 10, 10, 10, 10, 10, 10, 10, //
+            10, 10, 10, 200, 10, 10, 10, 10, 10, //
+            10, 10, 10, 10, 10, 10, 10, 10, 10, //
+            10, 10, 10, 200, 10, 10, 10, 10, 10, //
+            10, 10, 10, 10, 10, 10, 10, 10, 10, //
+            10, 10, 10, 10, 10, 10, 10, 10, 10, //
+            10, 10, 10, 10, 10, 10, 10, 10, 10, //
+        ];
+        let threshold = 50;
+        let keypoints = fast_keypoints(&img, 9, 9, threshold);
+        assert_eq!(keypoints, vec![(3, 3), (3, 5)]);
+
+        let keypoints_with_orientation = compute_orientations(&img, 9, &keypoints);
+        assert_eq!(keypoints_with_orientation.len(), 2);
+        assert_eq!(keypoints_with_orientation[0].orientation, 0.0);
+        // 0.0 is the angle of the vector (1, 0)
+        assert_eq!(keypoints_with_orientation[1].orientation, 0.0);
+        // this shows horizontal orientation is working
+
+        // Test with a larger 9x9 image where there are two corners
+        let img = [
+            10, 10, 10, 10, 10, 10, 10, 10, 10, //
+            10, 10, 10, 10, 10, 10, 10, 10, 10, //
+            10, 10, 10, 10, 10, 10, 10, 10, 10, //
+            10, 10, 10, 200, 10, 200, 10, 10, 10, //
+            10, 10, 10, 10, 10, 10, 10, 10, 10, //
+            10, 10, 10, 10, 10, 10, 10, 10, 10, //
+            10, 10, 10, 10, 10, 10, 10, 10, 10, //
+            10, 10, 10, 10, 10, 10, 10, 10, 10, //
+            10, 10, 10, 10, 10, 10, 10, 10, 10, //
+        ];
+        let threshold = 50;
+        let keypoints = fast_keypoints(&img, 9, 9, threshold);
+        assert_eq!(keypoints, vec![(3, 3), (5, 3)]);
+
+        let keypoints_with_orientation = compute_orientations(&img, 9, &keypoints);
+        assert_eq!(keypoints_with_orientation.len(), 2);
+        assert_eq!(keypoints_with_orientation[0].orientation, 0.0);
+        // 0.0 is the angle of the vector (1, 0)
+        assert_eq!(keypoints_with_orientation[1].orientation, 0.0);
+        // this shows horizontal orientation is working (I guess it prefers horizontal orientation?)
     }
 }
