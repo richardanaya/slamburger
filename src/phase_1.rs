@@ -55,6 +55,10 @@ pub fn greyscale_gaussian_blur(img: &[u8], width: usize, height: usize) -> Vec<u
     output
 }
 
+/****************/
+/*  UNIT TESTS  */
+/****************/
+
 #[cfg(test)]
 mod tests {
     use super::*;
