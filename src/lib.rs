@@ -48,8 +48,13 @@ pub unsafe fn calculate(width: usize, height: usize) -> usize {
 
     let (keypoints, descriptors) = get_keypoints_with_descriptors_from_image(slice, width, height);
 
-    let matched_keypoints =
+    let _matched_keypoints =
         phase_4::match_features(&keypoints, &descriptors, &keypoints, &descriptors, 32);
+
+    // now do phase 5
+    /*let camera = phase_5::build_intrinsic_matrix(0.5, 0.5, 0.5, 0.5);
+    let (rotation, translation) =
+        phase_6::perspective_n_point(keypoints_2d, keypoints_3d, intrinsic_matrix);*/
 
     let layout = Layout::array::<KeyPoint>(keypoints.len()).unwrap();
     let ptr = alloc(layout) as *mut KeyPoint;
