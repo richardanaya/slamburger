@@ -41,12 +41,18 @@ impl<'a> Slam<'a> {
         let key_points_with_descriptors_a = {
             let width = self.image_a.width;
             let height = self.image_a.height;
+
+            // PHASE 1  -  Convert RGB image to greyscale and blur it with a Gaussian filter
             let greyscale = phase_1::rgb_to_grayscale(self.image_a.data, width, height);
             let blurred_img = phase_1::greyscale_gaussian_blur(&greyscale, width, height);
             let threshold: u8 = 30;
+
+            // PHASE 2  -  Detect FAST keypoints and compute their orientations
             let keypoints = phase_2::fast_keypoints(&blurred_img, width, height, threshold);
             let key_points_with_orientation =
                 phase_2::compute_orientations(&blurred_img, width, &keypoints);
+
+            // PHASE 3  -  Compute BRIEF descriptors for each keypoint so we can visually match them
             let descriptors = phase_3::compute_brief_descriptors(
                 &blurred_img,
                 width as u32,
@@ -62,12 +68,18 @@ impl<'a> Slam<'a> {
         let key_points_with_descriptors_b = {
             let width = self.image_b.width;
             let height = self.image_b.height;
+
+            // PHASE 1  -  Convert RGB image to greyscale and blur it with a Gaussian filter
             let greyscale = phase_1::rgb_to_grayscale(self.image_b.data, width, height);
             let blurred_img = phase_1::greyscale_gaussian_blur(&greyscale, width, height);
             let threshold: u8 = 30;
+
+            // PHASE 2  -  Detect FAST keypoints and compute their orientations
             let keypoints = phase_2::fast_keypoints(&blurred_img, width, height, threshold);
             let key_points_with_orientation =
                 phase_2::compute_orientations(&blurred_img, width, &keypoints);
+
+            // PHASE 3  -  Compute BRIEF descriptors for each keypoint so we can visually match them
             let descriptors = phase_3::compute_brief_descriptors(
                 &blurred_img,
                 width as u32,
@@ -80,6 +92,7 @@ impl<'a> Slam<'a> {
             (key_points_with_orientation, descriptors)
         };
 
+        // PHASE 4  -  Match features between image A and B using Hamming distance of BRIEF descriptors
         let (keypoints_a, descriptors_a) = key_points_with_descriptors_a;
         let (keypoints_b, descriptors_b) = key_points_with_descriptors_b;
 
@@ -91,6 +104,7 @@ impl<'a> Slam<'a> {
             self.max_hamming_distance,
         );
 
+        // PHASE 5  -  RANSAC to find the best rotation and translation using 8 point algorithm
         (
             phase_5::calculate_rotation_translation(&matched_keypoints, &mut self.random),
             matched_keypoints,
