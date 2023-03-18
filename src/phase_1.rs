@@ -6,6 +6,9 @@ pub fn rgb_to_grayscale(img: &[u8], width: usize, height: usize) -> Vec<u8> {
             let r = img[idx] as f32;
             let g = img[idx + 1] as f32;
             let b = img[idx + 2] as f32;
+            // these look like magic numbers, but there is some logic behind them
+            // https://en.wikipedia.org/wiki/Grayscale#Converting_color_to_grayscale
+            // check out luma coding
             let g = (0.299 * r + 0.587 * g + 0.114 * b) as u8;
             greyscale_image[y * width + x] = g;
         }
@@ -14,7 +17,10 @@ pub fn rgb_to_grayscale(img: &[u8], width: usize, height: usize) -> Vec<u8> {
 }
 
 pub fn greyscale_gaussian_blur(img: &[u8], width: usize, height: usize) -> Vec<u8> {
+    // horizontal and vertical blur is pretty fast to get a good result
     const KERNEL_SIZE: usize = 5;
+
+    // These values represent a normalized Gaussian distribution with a standard deviation of 1.0.
     const KERNEL: [f32; KERNEL_SIZE] = [0.06136, 0.24477, 0.38774, 0.24477, 0.06136];
 
     let mut output = vec![0u8; img.len()];
