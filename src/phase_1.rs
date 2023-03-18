@@ -1,4 +1,5 @@
-pub fn rgb_to_grayscale<'a>(img: &'a mut [u8], width: usize, height: usize) -> &'a [u8] {
+pub fn rgb_to_grayscale(img: &[u8], width: usize, height: usize) -> Vec<u8> {
+    let mut greyscale_image = vec![0u8; width * height];
     for y in 0..height {
         for x in 0..width {
             let idx = 4 * (y * width + x);
@@ -6,10 +7,10 @@ pub fn rgb_to_grayscale<'a>(img: &'a mut [u8], width: usize, height: usize) -> &
             let g = img[idx + 1] as f32;
             let b = img[idx + 2] as f32;
             let g = (0.299 * r + 0.587 * g + 0.114 * b) as u8;
-            img[y * width + x] = g;
+            greyscale_image[y * width + x] = g;
         }
     }
-    &img[0..(width * height)]
+    greyscale_image
 }
 
 pub fn greyscale_gaussian_blur(img: &[u8], width: usize, height: usize) -> Vec<u8> {

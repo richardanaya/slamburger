@@ -1,15 +1,14 @@
+use common::KeyPoint;
 use std::alloc::{alloc, dealloc, Layout};
 use std::slice;
+mod common;
 mod phase_1;
 mod phase_2;
-use common::Descriptor;
-use common::KeyPoint;
-use rand::Rand;
-mod common;
 mod phase_3;
 mod phase_4;
 mod phase_5;
 mod rand;
+mod slam;
 
 static mut VEC_PTR: *mut u8 = 0 as *mut u8;
 static mut VEC_LEN: usize = 0;
@@ -47,30 +46,40 @@ static mut VEC_KEYPOINTS_LEN: usize = 0;
 pub unsafe fn calculate(width: usize, height: usize) -> usize {
     let slice = slice::from_raw_parts_mut(VEC_PTR, VEC_LEN);
 
-    let (keypoints, descriptors) = get_keypoints_with_descriptors_from_image(slice, width, height);
+    let image_a = common::Image {
+        data: slice,
+        width,
+        height,
+    };
 
-    let matched_keypoints =
-        phase_4::match_features(&keypoints, &descriptors, &keypoints, &descriptors, 32);
+    let image_b = common::Image {
+        data: slice,
+        width,
+        height,
+    };
 
-    let mut rnd = get_rand_gen();
+    let mut slam = slam::Slam::new(image_a, image_b);
 
-    let _result = phase_5::calculate_rotation_translation(&matched_keypoints, &mut rnd);
+    let (_result, matched_keypoints) = slam.calculate_pose();
 
-    let layout = Layout::array::<KeyPoint>(keypoints.len()).unwrap();
+    // split matched_keypoints into two vectors
+    let mut keypoints_a = Vec::new();
+    let mut keypoints_b = Vec::new();
+    for (keypoint_a, keypoint_b) in matched_keypoints {
+        keypoints_a.push(keypoint_a);
+        keypoints_b.push(keypoint_b);
+    }
+
+    let layout = Layout::array::<KeyPoint>(keypoints_a.len()).unwrap();
     let ptr = alloc(layout) as *mut KeyPoint;
 
     VEC_KEYPOINTS_PTR = ptr;
-    VEC_KEYPOINTS_LEN = keypoints.len();
+    VEC_KEYPOINTS_LEN = keypoints_a.len();
 
     // copy data to the allocated memory
-    ptr.copy_from_nonoverlapping(keypoints.as_ptr(), keypoints.len());
+    ptr.copy_from_nonoverlapping(keypoints_a.as_ptr(), keypoints_a.len());
 
     VEC_KEYPOINTS_LEN
-}
-
-fn get_rand_gen() -> Rand {
-    let seed = 0123515132;
-    Rand::new_with_seed(seed)
 }
 
 #[no_mangle]
@@ -86,48 +95,4 @@ pub unsafe fn get_grey_scale() -> *mut u8 {
 #[no_mangle]
 pub unsafe fn get_grey_scale_len() -> usize {
     VEC_GRAYSCALE_LEN
-}
-
-pub fn get_keypoints_with_descriptors_from_image(
-    img: &mut [u8],
-    width: usize,
-    height: usize,
-) -> (Vec<KeyPoint>, Vec<Descriptor>) {
-    // PHASE 1 - convert to grayscale and blur, that way our keypoints are more accurate
-    // otherwise we'll get WAY to many identified features of the images to track and will slow things down
-    let greyscale = phase_1::rgb_to_grayscale(img, width, height);
-    let blurred_img = phase_1::greyscale_gaussian_blur(&greyscale, width, height);
-
-    // PHASE 2 - FAST keypoints
-    // This basically finds the corners of the image the the orientation direction it's facing,
-    // we call these keypoints
-    let threshold: u8 = 30;
-    let keypoints = phase_2::fast_keypoints(&blurred_img, width, height, threshold);
-    let key_points_with_orientation =
-        phase_2::compute_orientations(&blurred_img, width, &keypoints);
-
-    // PHASE 3 - BREIF descriptors
-    // This basically looks at surrounding pixels and formulates a sequence of bits that can be used
-    // to compare the similarity of two keypoints
-
-    // The patch size is the size of the square we look at around the keypoint
-    let patch_size = 16;
-    // The number of pairs of pixels we look at to form our sequence of bits
-    let num_pairs = 256;
-    // The seed is used to generate random numbers for the pairs of pixels we look at
-    // we kee the seed equal for every image so that we can compare the same keypoints
-    // between images and not overfit to certain patterns
-    let seed = 2523523;
-
-    let descriptors = phase_3::compute_brief_descriptors(
-        &blurred_img,
-        width as u32,
-        height as u32,
-        &key_points_with_orientation,
-        patch_size,
-        num_pairs,
-        &mut &mut Rand::new_with_seed(seed),
-    );
-
-    (key_points_with_orientation, descriptors)
 }

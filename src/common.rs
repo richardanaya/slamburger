@@ -7,3 +7,9 @@ pub struct KeyPoint {
 }
 
 pub struct Descriptor(pub Vec<u8>);
+
+pub struct Image<'a> {
+    pub width: usize,
+    pub height: usize,
+    pub data: &'a [u8],
+}

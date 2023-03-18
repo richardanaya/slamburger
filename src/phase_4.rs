@@ -5,7 +5,7 @@ pub fn match_features(
     descriptors1: &[Descriptor],
     keypoints2: &[KeyPoint],
     descriptors2: &[Descriptor],
-    max_hamming_distance: u32,
+    max_hamming_distance: usize,
 ) -> Vec<(KeyPoint, KeyPoint)> {
     let mut matches = Vec::new();
 
@@ -30,10 +30,11 @@ pub fn match_features(
     matches
 }
 
-fn hamming_distance(bytes1: &[u8], bytes2: &[u8]) -> u32 {
-    bytes1
+fn hamming_distance(bytes1: &[u8], bytes2: &[u8]) -> usize {
+    let a: u32 = bytes1
         .iter()
         .zip(bytes2)
         .map(|(byte1, byte2)| (byte1 ^ byte2).count_ones())
-        .sum()
+        .sum();
+    a as usize
 }
