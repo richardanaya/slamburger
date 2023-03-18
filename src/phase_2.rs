@@ -22,7 +22,6 @@ fn is_corner_in_spiral(
         if is_signifigant_intensity_difference {
             consecutive += 1;
             if consecutive == needed_consecutive_intensity_differences {
-                println!("hey");
                 return true;
             }
         } else {
@@ -62,11 +61,8 @@ pub fn fast_keypoints(
     threshold: u8,
 ) -> Vec<(usize, usize)> {
     let mut keypoints = Vec::new();
-    println!("iterating from 3 to {}", height as isize - 3);
-    println!("iterating from 3 to {}", width as isize - 3);
     for y in 3..(height as isize - 3) {
         for x in 3..(width as isize - 3) {
-            println!("{} {} ", x, y);
             // get the intensity at x y
             let intensity = img[(y * width as isize + x) as usize];
 
@@ -211,8 +207,6 @@ mod tests {
         );
         assert_eq!(is_corner, true);
 
-        println!("start");
-
         // Test with a more complex spiral pattern where the center pixel is a corner
         // notice we have multiple consecutive intensity differences that are greater than the threshold
         let circle: SpiralIntensity = [10, 10, 100, 10, 10, 10, 100, 10, 10, 10, 10, 10];
@@ -244,8 +238,6 @@ mod tests {
         let threshold = 50;
         let keypoints = fast_keypoints(&img, width, height, threshold);
         assert_eq!(keypoints, vec![]);
-
-        println!("start");
 
         // Test with a simple 9x9 image where there are no corners
         let img = [
