@@ -53,14 +53,17 @@ impl<'a> Slam<'a> {
                 phase_2::compute_orientations(&blurred_img, width, &keypoints);
 
             // PHASE 3  -  Compute BRIEF descriptors for each keypoint so we can visually match them
+            let sampling_pattern = phase_3::generate_sampling_pattern(
+                &mut self.random,
+                self.patch_size,
+                self.num_pairs,
+            );
             let descriptors = phase_3::compute_brief_descriptors(
                 &blurred_img,
                 width as u32,
                 height as u32,
                 &key_points_with_orientation,
-                self.patch_size,
-                self.num_pairs,
-                &mut self.random,
+                &sampling_pattern,
             );
             (key_points_with_orientation, descriptors)
         };
@@ -80,14 +83,17 @@ impl<'a> Slam<'a> {
                 phase_2::compute_orientations(&blurred_img, width, &keypoints);
 
             // PHASE 3  -  Compute BRIEF descriptors for each keypoint so we can visually match them
+            let sampling_pattern = phase_3::generate_sampling_pattern(
+                &mut self.random,
+                self.patch_size,
+                self.num_pairs,
+            );
             let descriptors = phase_3::compute_brief_descriptors(
                 &blurred_img,
                 width as u32,
                 height as u32,
                 &key_points_with_orientation,
-                self.patch_size,
-                self.num_pairs,
-                &mut self.random,
+                &sampling_pattern,
             );
             (key_points_with_orientation, descriptors)
         };

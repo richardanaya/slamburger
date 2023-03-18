@@ -9,19 +9,15 @@ pub fn compute_brief_descriptors(
     width: u32,
     height: u32,
     keypoints: &[KeyPoint],
-    patch_size: usize,
-    num_pairs: usize,
-    rnd: &mut Rand,
+    sampling_pattern: &[((f32, f32), (f32, f32))],
 ) -> Vec<Descriptor> {
-    let sampling_pattern = generate_sampling_pattern(rnd, patch_size, num_pairs);
-
     keypoints
         .iter()
-        .map(|kp| compute_descriptor(image, width, height, kp, &sampling_pattern))
+        .map(|kp| compute_descriptor(image, width, height, kp, sampling_pattern))
         .collect()
 }
 
-fn generate_sampling_pattern(
+pub fn generate_sampling_pattern(
     rng: &mut Rand,
     patch_size: usize,
     num_pairs: usize,
@@ -96,4 +92,131 @@ fn rotate_point(x: f32, y: f32, angle: f32) -> (f32, f32) {
     let sin_angle = angle.sin();
     let cos_angle = angle.cos();
     (x * cos_angle - y * sin_angle, x * sin_angle + y * cos_angle)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::KeyPoint;
+    #[test]
+    fn test_compute_descriptor() {
+        let image = vec![
+            1, 2, 3, //
+            4, 5, 6, //
+            7, 8, 9, //
+        ];
+        let width = 3;
+        let height = 3;
+        let keypoint = KeyPoint {
+            x: 1.0,
+            y: 1.0,
+            orientation: 0.0,
+        };
+        let sampling_pattern = vec![
+            ((0.0, 0.0), (0.0, 1.0)),
+            ((0.0, 0.0), (1.0, 0.0)),
+            ((0.0, 0.0), (1.0, 1.0)),
+            ((0.0, 0.0), (0.0, -1.0)),
+            ((0.0, 0.0), (-1.0, 0.0)),
+            ((0.0, 0.0), (-1.0, -1.0)),
+        ];
+
+        // remember binary starts from right, so first three samples are 0 because they are less than 5
+        // and next three samples are 1 because they are greater than 5
+        let expected_descriptor = Descriptor(vec![0b0011_1000]);
+
+        let actual_descriptor =
+            compute_descriptor(&image, width, height, &keypoint, &sampling_pattern);
+
+        assert_eq!(expected_descriptor, actual_descriptor);
+    }
+
+    #[test]
+    fn test_compute_brief_descriptors() {
+        let image = vec![
+            1, 2, 3, //
+            4, 5, 6, //
+            7, 8, 9, //
+        ];
+        let width = 3;
+        let height = 3;
+        let sampling_pattern = vec![
+            ((0.0, 0.0), (0.0, 1.0)),
+            ((0.0, 0.0), (1.0, 0.0)),
+            ((0.0, 0.0), (1.0, 1.0)),
+            ((0.0, 0.0), (0.0, -1.0)),
+            ((0.0, 0.0), (-1.0, 0.0)),
+            ((0.0, 0.0), (-1.0, -1.0)),
+        ];
+
+        let expected_descriptors = vec![
+            // please note that we clamp the coordinates to the image boundaries which is why these descriptor is what it is
+            Descriptor(vec![0b0011_1000]),
+            Descriptor(vec![0b0011_1000]),
+            Descriptor(vec![0b0000_0000]),
+            Descriptor(vec![0b0010_1000]),
+            Descriptor(vec![0b0011_0000]),
+        ];
+
+        let actual_descriptors = compute_brief_descriptors(
+            &image,
+            width,
+            height,
+            &[
+                KeyPoint {
+                    x: 1.0,
+                    y: 1.0,
+                    orientation: 0.0,
+                },
+                KeyPoint {
+                    x: 2.0,
+                    y: 2.0,
+                    orientation: 0.0,
+                },
+                KeyPoint {
+                    x: 0.0,
+                    y: 0.0,
+                    orientation: 0.0,
+                },
+                KeyPoint {
+                    x: 0.0,
+                    y: 2.0,
+                    orientation: 0.0,
+                },
+                KeyPoint {
+                    x: 2.0,
+                    y: 0.0,
+                    orientation: 0.0,
+                },
+            ],
+            &sampling_pattern,
+        );
+
+        assert_eq!(expected_descriptors, actual_descriptors);
+    }
+
+    #[test]
+    fn test_rotate_point() {
+        let x = 0.0;
+        let y = 2.0;
+        let angle = std::f32::consts::PI / 2.0;
+
+        let expected_result = (-2.0, 0.0);
+
+        let actual_result = rotate_point(x, y, angle);
+
+        assert!((expected_result.0 - actual_result.0).abs() < 0.0001);
+        assert!((expected_result.1 - actual_result.1).abs() < 0.0001);
+
+        let x = 0.0;
+        let y = 2.0;
+        let angle = 0.0;
+
+        let expected_result = (0.0, 2.0);
+
+        let actual_result = rotate_point(x, y, angle);
+
+        assert!((expected_result.0 - actual_result.0).abs() < 0.0001);
+        assert!((expected_result.1 - actual_result.1).abs() < 0.0001);
+    }
 }
