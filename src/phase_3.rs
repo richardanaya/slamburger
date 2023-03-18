@@ -1,5 +1,7 @@
-use crate::common::{Descriptor, KeyPoint};
-use crate::rand::*;
+use crate::{
+    common::{Descriptor, KeyPoint},
+    rand::Rand,
+};
 use std::iter;
 
 pub fn compute_brief_descriptors(
@@ -9,10 +11,9 @@ pub fn compute_brief_descriptors(
     keypoints: &[KeyPoint],
     patch_size: usize,
     num_pairs: usize,
-    rng_seed: u64,
+    rnd: &mut Rand,
 ) -> Vec<Descriptor> {
-    let mut rng = Rand::new_with_seed(rng_seed);
-    let sampling_pattern = generate_sampling_pattern(&mut rng, patch_size, num_pairs);
+    let sampling_pattern = generate_sampling_pattern(rnd, patch_size, num_pairs);
 
     keypoints
         .iter()

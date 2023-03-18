@@ -20,3 +20,25 @@ impl Rand {
         min + rand * range
     }
 }
+
+// implement choose_multiple for Vec
+
+pub trait ChooseMultiple {
+    fn choose_multiple(&self, rng: &mut Rand, n: usize) -> Self
+    where
+        Self: Sized;
+}
+
+impl<T> ChooseMultiple for Vec<T>
+where
+    T: Clone,
+{
+    fn choose_multiple(&self, rng: &mut Rand, n: usize) -> Self {
+        let mut result = Vec::new();
+        for _ in 0..n {
+            let index = rng.next() as usize % self.len();
+            result.push(self[index].clone());
+        }
+        result
+    }
+}

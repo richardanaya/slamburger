@@ -4,6 +4,7 @@ mod phase_1;
 mod phase_2;
 use common::Descriptor;
 use common::KeyPoint;
+use rand::Rand;
 mod common;
 mod phase_3;
 mod phase_4;
@@ -48,13 +49,12 @@ pub unsafe fn calculate(width: usize, height: usize) -> usize {
 
     let (keypoints, descriptors) = get_keypoints_with_descriptors_from_image(slice, width, height);
 
-    let _matched_keypoints =
+    let matched_keypoints =
         phase_4::match_features(&keypoints, &descriptors, &keypoints, &descriptors, 32);
 
-    // now do phase 5
-    /*let camera = phase_5::build_intrinsic_matrix(0.5, 0.5, 0.5, 0.5);
-    let (rotation, translation) =
-        phase_6::perspective_n_point(keypoints_2d, keypoints_3d, intrinsic_matrix);*/
+    let mut rnd = get_rand_gen();
+
+    let _result = phase_5::calculate_rotation_translation(&matched_keypoints, &mut rnd);
 
     let layout = Layout::array::<KeyPoint>(keypoints.len()).unwrap();
     let ptr = alloc(layout) as *mut KeyPoint;
@@ -66,6 +66,11 @@ pub unsafe fn calculate(width: usize, height: usize) -> usize {
     ptr.copy_from_nonoverlapping(keypoints.as_ptr(), keypoints.len());
 
     VEC_KEYPOINTS_LEN
+}
+
+fn get_rand_gen() -> Rand {
+    let seed = 0123515132;
+    Rand::new_with_seed(seed)
 }
 
 #[no_mangle]
@@ -121,7 +126,7 @@ pub fn get_keypoints_with_descriptors_from_image(
         &key_points_with_orientation,
         patch_size,
         num_pairs,
-        seed,
+        &mut &mut Rand::new_with_seed(seed),
     );
 
     (key_points_with_orientation, descriptors)
