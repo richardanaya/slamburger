@@ -1,5 +1,5 @@
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 pub struct KeyPoint {
     pub x: f32,
     pub y: f32,
