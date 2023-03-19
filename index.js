@@ -33,6 +33,12 @@
   video.onloadedmetadata = function (e) {
     video.play();
   };
+
+  const frame_1 = document.createElement("canvas");
+  const frame_2 = document.createElement("canvas");
+  let frame_1_ctx = undefined;
+  let frame_2_ctx = undefined;
+
   video.onplay = function () {
     const run = function () {
       // get video size
@@ -45,10 +51,28 @@
         return;
       }
 
-      canvas.width = width;
-      canvas.height = height;
-      ctx.drawImage(video, 0, 0);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      if (frame_1_ctx === undefined && frame_2_ctx === undefined) {
+        frame_1.width = width;
+        frame_1.height = height;
+        frame_1_ctx = frame_1.getContext("2d");
+        frame_1_ctx.drawImage(video, 0, 0);
+        canvas.width = width * 2;
+        canvas.height = height;
+      } else if (frame_1_ctx !== undefined && frame_2_ctx === undefined) {
+        frame_2.width = width;
+        frame_2.height = height;
+        frame_2_ctx = frame_2.getContext("2d");
+        frame_2_ctx.drawImage(frame_1, 0, 0);
+        frame_1_ctx.drawImage(video, 0, 0);
+      } else if (frame_1_ctx !== undefined && frame_2_ctx !== undefined) {
+        frame_2_ctx.drawImage(frame_1, 0, 0);
+        frame_1_ctx.drawImage(video, 0, 0);
+      }
+
+      ctx.drawImage(frame_1, 0, 0);
+      ctx.drawImage(frame_2, width, 0);
+
+      /*const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
 
       let ptr = wasmInstance.instance.exports.allocate_vec(data.length);
@@ -92,7 +116,7 @@
           y + 10 * Math.sin(orientation)
         );
         ctx.stroke();
-      }
+      }*/
       requestAnimationFrame(run);
     };
     requestAnimationFrame(run);
