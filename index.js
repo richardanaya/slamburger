@@ -15,6 +15,9 @@
       get_keypoints: function () {
         return wasmInstance.exports.get_keypoints();
       },
+      js_log: function (signal) {
+        console.log(signal);
+      },
     },
   });
 
@@ -38,6 +41,10 @@
   const frame_2 = document.createElement("canvas");
   let frame_1_ctx = undefined;
   let frame_2_ctx = undefined;
+  let frame1_ptr = undefined;
+  let frame2_ptr = undefined;
+
+  let slot = 0;
 
   video.onplay = function () {
     const run = function () {
@@ -71,6 +78,45 @@
 
       ctx.drawImage(frame_1, 0, 0);
       ctx.drawImage(frame_2, width, 0);
+
+      if (slot === 0) {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        if (frame1_ptr === undefined) {
+          frame1_ptr = wasmInstance.instance.exports.allocate_slot_0(
+            data.length
+          );
+        }
+        const wasmMemory = new Uint8Array(
+          wasmInstance.instance.exports.memory.buffer
+        );
+        wasmMemory.set(data, frame1_ptr);
+        slot = 1;
+      } else {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        if (frame2_ptr === undefined) {
+          frame2_ptr = wasmInstance.instance.exports.allocate_slot_1(
+            data.length
+          );
+        }
+        const wasmMemory = new Uint8Array(
+          wasmInstance.instance.exports.memory.buffer
+        );
+        wasmMemory.set(data, frame2_ptr);
+        slot = 0;
+      }
+
+      if (frame1_ptr !== undefined && frame2_ptr !== undefined) {
+        console.time();
+        let keypointLen = wasmInstance.instance.exports.calculate(
+          frame_1.width,
+          frame_1.height,
+          slot
+        );
+        console.timeEnd();
+        console.log(keypointLen);
+      }
 
       /*const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
