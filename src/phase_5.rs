@@ -95,7 +95,7 @@ fn ransac_essential_matrix(
         let kps2_inliers: Vec<KeyPoint> = best_inliers.iter().map(|&i| keypoints[i].1).collect();
         return compute_essential_matrix(&kps1_inliers, &kps2_inliers);
     }
-
+    // getting here and don't know why ...
     None
 }
 
