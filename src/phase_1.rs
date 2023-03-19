@@ -119,10 +119,10 @@ mod tests {
         ];
 
         let expected_output: Vec<u8> = vec![
-            166, 166, 166, 166, 166, 115, 115, 115, 115, 115, 71, 71, 71, 71, 71,
+            153, 153, 153, 153, 153, 119, 119, 119, 119, 119, 86, 86, 86, 86, 86,
         ];
 
-        let output = greyscale_gaussian_blur(&input_image, 5, 3);
+        let output = greyscale_gaussian_blur(&input_image, 5, 3, 2.5);
         assert_eq!(output, expected_output);
     }
 
@@ -130,7 +130,7 @@ mod tests {
     fn test_greyscale_gaussian_blur_empty_image() {
         let input_image: [u8; 0] = [];
         let expected_output: Vec<u8> = vec![];
-        let output = greyscale_gaussian_blur(&input_image, 0, 0);
+        let output = greyscale_gaussian_blur(&input_image, 0, 0, 2.5);
         assert_eq!(output, expected_output);
     }
     #[test]
@@ -170,7 +170,7 @@ mod tests {
     fn test_greyscale_gaussian_blur_single_pixel() {
         let input_image: [u8; 1] = [128];
         let expected_output: Vec<u8> = vec![128];
-        let output = greyscale_gaussian_blur(&input_image, 1, 1);
+        let output = greyscale_gaussian_blur(&input_image, 1, 1, 2.5);
         assert_eq!(output, expected_output);
     }
 
@@ -180,7 +180,7 @@ mod tests {
 
         let expected_output: Vec<u8> = vec![128, 128, 128, 128, 128, 128, 128, 128, 128];
 
-        let output = greyscale_gaussian_blur(&input_image, 3, 3);
+        let output = greyscale_gaussian_blur(&input_image, 3, 3, 2.5);
         assert_eq!(output, expected_output);
     }
 }
