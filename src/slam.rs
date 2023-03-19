@@ -42,7 +42,7 @@ impl<'a> Slam<'a> {
         (Vec<KeyPoint>, Vec<Descriptor>, Vec<u8>),
         (Vec<KeyPoint>, Vec<Descriptor>),
     ) {
-        let key_points_with_descriptors_a = {
+        let (key_points_with_orientation_a, blurred_image_a) = {
             let width = self.image_a.width;
             let height = self.image_a.height;
 
@@ -57,23 +57,10 @@ impl<'a> Slam<'a> {
             let key_points_with_orientation =
                 phase_2::compute_orientations(&blurred_img, width, &keypoints);
 
-            // PHASE 3  -  Compute BRIEF descriptors for each keypoint so we can visually match them
-            let sampling_pattern = phase_3::generate_sampling_pattern(
-                &mut self.random,
-                self.patch_size,
-                self.num_pairs,
-            );
-            let descriptors = phase_3::compute_brief_descriptors(
-                &blurred_img,
-                width as u32,
-                height as u32,
-                &key_points_with_orientation,
-                &sampling_pattern,
-            );
-            (key_points_with_orientation, descriptors, blurred_img)
+            (key_points_with_orientation, blurred_img)
         };
 
-        let key_points_with_descriptors_b = {
+        let (key_points_with_orientation_b, blurred_image_b) = {
             let width = self.image_b.width;
             let height = self.image_b.height;
 
@@ -88,30 +75,33 @@ impl<'a> Slam<'a> {
             let key_points_with_orientation =
                 phase_2::compute_orientations(&blurred_img, width, &keypoints);
 
-            // PHASE 3  -  Compute BRIEF descriptors for each keypoint so we can visually match them
-            let sampling_pattern = phase_3::generate_sampling_pattern(
-                &mut self.random,
-                self.patch_size,
-                self.num_pairs,
-            );
-            let descriptors = phase_3::compute_brief_descriptors(
-                &blurred_img,
-                width as u32,
-                height as u32,
-                &key_points_with_orientation,
-                &sampling_pattern,
-            );
-            (key_points_with_orientation, descriptors)
+            (key_points_with_orientation, blurred_img)
         };
 
-        // PHASE 4  -  Match features between image A and B using Hamming distance of BRIEF descriptors
-        let (keypoints_a, descriptors_a, blurred_img) = key_points_with_descriptors_a;
-        let (keypoints_b, descriptors_b) = key_points_with_descriptors_b;
+        // PHASE 3  -  Compute BRIEF descriptors for each keypoint so we can visually match them
+        let sampling_pattern =
+            phase_3::generate_sampling_pattern(&mut self.random, self.patch_size, self.num_pairs);
+
+        let descriptors_a = phase_3::compute_brief_descriptors(
+            &blurred_image_a,
+            self.image_a.width as u32,
+            self.image_a.height as u32,
+            &key_points_with_orientation_b,
+            &sampling_pattern,
+        );
+
+        let descriptors_b = phase_3::compute_brief_descriptors(
+            &blurred_image_b,
+            self.image_b.width as u32,
+            self.image_b.height as u32,
+            &key_points_with_orientation_b,
+            &sampling_pattern,
+        );
 
         let matched_keypoints = phase_4::match_features(
-            &keypoints_a,
+            &key_points_with_orientation_a,
             &descriptors_a,
-            &keypoints_b,
+            &key_points_with_orientation_b,
             &descriptors_b,
             self.max_hamming_distance,
         );
@@ -120,8 +110,12 @@ impl<'a> Slam<'a> {
         (
             phase_5::calculate_rotation_translation(&matched_keypoints, &mut self.random),
             matched_keypoints,
-            (keypoints_a, descriptors_a, blurred_img),
-            (keypoints_b, descriptors_b),
+            (
+                key_points_with_orientation_a,
+                descriptors_a,
+                blurred_image_a,
+            ),
+            (key_points_with_orientation_b, descriptors_b),
         )
     }
 }
