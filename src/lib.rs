@@ -79,9 +79,10 @@ pub unsafe fn calculate(width: usize, height: usize, slot: usize) -> usize {
 
     let mut slam = slam::Slam::new(image_a, image_b);
 
-    let (_result, matched_keypoints) = slam.calculate_pose();
+    let (_result, _matched_keypoints, keypoints_and_descriptors_a, keypoints_and_descriptors_b) =
+        slam.calculate_pose();
 
-    matched_keypoints.len()
+    keypoints_and_descriptors_a.0.len() - keypoints_and_descriptors_b.0.len()
 
     /*
 

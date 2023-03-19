@@ -37,6 +37,8 @@ impl<'a> Slam<'a> {
     ) -> (
         Option<(Matrix3<f32>, Vector3<f32>)>,
         Vec<(KeyPoint, KeyPoint)>,
+        (Vec<KeyPoint>, Vec<Descriptor>),
+        (Vec<KeyPoint>, Vec<Descriptor>),
     ) {
         let key_points_with_descriptors_a = {
             let width = self.image_a.width;
@@ -114,6 +116,8 @@ impl<'a> Slam<'a> {
         (
             phase_5::calculate_rotation_translation(&matched_keypoints, &mut self.random),
             matched_keypoints,
+            (keypoints_a, descriptors_a),
+            (keypoints_b, descriptors_b),
         )
     }
 }
