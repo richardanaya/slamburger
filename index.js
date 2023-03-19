@@ -105,14 +105,11 @@
       }
 
       if (frame1_ptr !== undefined && frame2_ptr !== undefined) {
-        console.time();
-        let output = wasmInstance.instance.exports.calculate(
+        wasmInstance.instance.exports.calculate(
           frame_1.width,
           frame_1.height,
           slot
         );
-        console.timeEnd();
-        console.log(output);
 
         let greyPtr = wasmInstance.instance.exports.get_grayscale();
         let greyLen = wasmInstance.instance.exports.get_grayscale_len();
@@ -193,6 +190,32 @@
           );
           ctx.stroke();
         }
+      }
+
+      let keypointMatchesPtr =
+        wasmInstance.instance.exports.get_keypoints_matches();
+      let keypointMatchesLen =
+        wasmInstance.instance.exports.get_keypoints_matches_len();
+      let keypointData = new Float32Array(
+        wasmInstance.instance.exports.memory.buffer,
+        keypointMatchesPtr,
+        keypointMatchesLen * 3
+      );
+
+      //for each pair, draw a line
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = "red";
+      for (let i = 0; i < keypointMatchesLen; i += 2) {
+        let x0 = keypointData[i * 3];
+        let y0 = keypointData[i * 3 + 1];
+
+        let x1 = keypointData[i * 3 + 3] + width;
+        let y1 = keypointData[i * 3 + 4];
+
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.stroke();
       }
 
       requestAnimationFrame(run);

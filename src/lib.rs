@@ -60,6 +60,9 @@ static mut VEC_KEYPOINTS_SLOT_0_LEN: usize = 0;
 static mut VEC_KEYPOINTS_SLOT_1_PTR: *mut KeyPoint = 0 as *mut KeyPoint;
 static mut VEC_KEYPOINTS_SLOT_1_LEN: usize = 0;
 
+static mut VEC_KEYPOINTS_MATCHES_PTR: *mut KeyPoint = 0 as *mut KeyPoint;
+static mut VEC_KEYPOINTS_MATCHES_LEN: usize = 0;
+
 #[no_mangle]
 pub unsafe fn calculate(width: usize, height: usize, slot: usize) -> usize {
     let slice_0 = slice::from_raw_parts_mut(VEC_PTR_SLOT_0, VEC_LEN_SLOT_0);
@@ -134,7 +137,27 @@ pub unsafe fn calculate(width: usize, height: usize, slot: usize) -> usize {
     // copy data to the allocated memory
     ptr.copy_from_nonoverlapping(rgb_grey.as_ptr(), rgb_grey.len());
 
-    matched_keypoints.len()
+    let mut matched_keypoints_flattened: Vec<KeyPoint> =
+        Vec::with_capacity(matched_keypoints.len() * 2);
+
+    matched_keypoints.into_iter().for_each(|(a, b)| {
+        matched_keypoints_flattened.push(a);
+        matched_keypoints_flattened.push(b);
+    });
+
+    let layout = Layout::array::<KeyPoint>(matched_keypoints_flattened.len()).unwrap();
+    let ptr = alloc(layout) as *mut KeyPoint;
+
+    VEC_KEYPOINTS_MATCHES_PTR = ptr;
+    VEC_KEYPOINTS_MATCHES_LEN = matched_keypoints_flattened.len();
+
+    // copy data to the allocated memory
+    ptr.copy_from_nonoverlapping(
+        matched_keypoints_flattened.as_ptr(),
+        matched_keypoints_flattened.len(),
+    );
+
+    matched_keypoints_flattened.len()
 }
 
 static mut VEC_GRAYSCALE_PTR: *mut u8 = 0 as *mut u8;
@@ -168,4 +191,14 @@ pub unsafe fn get_keypoints_slot_1() -> *mut KeyPoint {
 #[no_mangle]
 pub unsafe fn get_keypoints_slot_1_len() -> usize {
     VEC_KEYPOINTS_SLOT_1_LEN
+}
+
+#[no_mangle]
+pub unsafe fn get_keypoints_matches() -> *mut KeyPoint {
+    VEC_KEYPOINTS_MATCHES_PTR
+}
+
+#[no_mangle]
+pub unsafe fn get_keypoints_matches_len() -> usize {
+    VEC_KEYPOINTS_MATCHES_LEN
 }

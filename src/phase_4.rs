@@ -15,7 +15,7 @@ pub fn match_features(
 
         for (keypoint2, descriptor2) in keypoints2.iter().zip(descriptors2) {
             let distance = hamming_distance(&descriptor1.0, &descriptor2.0);
-            if distance <= best_distance {
+            if distance < best_distance {
                 best_distance = distance;
                 best_match = Some(keypoint2);
             }

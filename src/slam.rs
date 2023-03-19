@@ -26,9 +26,9 @@ impl<'a> Slam<'a> {
             image_a,
             image_b,
             random,
-            patch_size: 16,
+            patch_size: 20,
             num_pairs: 256,
-            max_hamming_distance: 140,
+            max_hamming_distance: 150,
         }
     }
 
