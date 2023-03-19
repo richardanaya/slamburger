@@ -16,6 +16,7 @@ pub struct Slam<'a> {
     patch_size: usize,
     num_pairs: usize,
     max_hamming_distance: usize,
+    blur_radius: f32,
 }
 
 impl<'a> Slam<'a> {
@@ -26,9 +27,10 @@ impl<'a> Slam<'a> {
             image_a,
             image_b,
             random,
-            patch_size: 20,
-            num_pairs: 256,
-            max_hamming_distance: 150,
+            patch_size: 100,
+            num_pairs: 500,
+            max_hamming_distance: 300,
+            blur_radius: 3.0,
         }
     }
 
@@ -46,8 +48,8 @@ impl<'a> Slam<'a> {
 
             // PHASE 1  -  Convert RGB image to greyscale and blur it with a Gaussian filter
             let greyscale = phase_1::rgb_to_grayscale(self.image_a.data, width, height);
-            let greyscale_clone = greyscale.clone();
-            let blurred_img = phase_1::greyscale_gaussian_blur(&greyscale, width, height);
+            let blurred_img =
+                phase_1::greyscale_gaussian_blur(&greyscale, width, height, self.blur_radius);
             let threshold: u8 = 30;
 
             // PHASE 2  -  Detect FAST keypoints and compute their orientations
@@ -68,7 +70,7 @@ impl<'a> Slam<'a> {
                 &key_points_with_orientation,
                 &sampling_pattern,
             );
-            (key_points_with_orientation, descriptors, greyscale_clone)
+            (key_points_with_orientation, descriptors, blurred_img)
         };
 
         let key_points_with_descriptors_b = {
@@ -77,7 +79,8 @@ impl<'a> Slam<'a> {
 
             // PHASE 1  -  Convert RGB image to greyscale and blur it with a Gaussian filter
             let greyscale = phase_1::rgb_to_grayscale(self.image_b.data, width, height);
-            let blurred_img = phase_1::greyscale_gaussian_blur(&greyscale, width, height);
+            let blurred_img =
+                phase_1::greyscale_gaussian_blur(&greyscale, width, height, self.blur_radius);
             let threshold: u8 = 30;
 
             // PHASE 2  -  Detect FAST keypoints and compute their orientations

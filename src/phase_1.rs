@@ -16,12 +16,32 @@ pub fn rgb_to_grayscale(img: &[u8], width: usize, height: usize) -> Vec<u8> {
     greyscale_image
 }
 
-pub fn greyscale_gaussian_blur(img: &[u8], width: usize, height: usize) -> Vec<u8> {
-    // horizontal and vertical blur is pretty fast to get a good result
-    const KERNEL_SIZE: usize = 5;
+use std::f32::consts::PI;
 
-    // These values represent a normalized Gaussian distribution with a standard deviation of 1.0.
-    const KERNEL: [f32; KERNEL_SIZE] = [0.06136, 0.24477, 0.38774, 0.24477, 0.06136];
+pub fn greyscale_gaussian_blur(
+    img: &[u8],
+    width: usize,
+    height: usize,
+    blur_radius: f32,
+) -> Vec<u8> {
+    let kernel_size = (blur_radius * 2.0).ceil() as usize | 1;
+    let half_kernel = (kernel_size / 2) as i32;
+
+    let mut kernel = vec![0f32; kernel_size];
+    let mut kernel_sum = 0f32;
+
+    for i in 0..kernel_size {
+        let x = i as f32 - half_kernel as f32;
+        let value =
+            (-x * x / (2.0 * blur_radius * blur_radius)).exp() / (blur_radius * (2.0 * PI).sqrt());
+        kernel[i] = value;
+        kernel_sum += value;
+    }
+
+    // Normalize the kernel
+    for i in 0..kernel_size {
+        kernel[i] /= kernel_sum;
+    }
 
     let mut output = vec![0u8; img.len()];
     let mut buffer = vec![0f32; width * height];
@@ -30,10 +50,10 @@ pub fn greyscale_gaussian_blur(img: &[u8], width: usize, height: usize) -> Vec<u
     for y in 0..height {
         for x in 0..width {
             let mut sum = 0.0;
-            for i in 0..KERNEL_SIZE {
-                let index =
-                    (x as i32 - 2 + i as i32).clamp(0, width as i32 - 1) as usize + y * width;
-                sum += KERNEL[i] * img[index] as f32;
+            for i in 0..kernel_size {
+                let index = (x as i32 - half_kernel + i as i32).clamp(0, width as i32 - 1) as usize
+                    + y * width;
+                sum += kernel[i] * img[index] as f32;
             }
             buffer[x + y * width] = sum;
         }
@@ -43,10 +63,11 @@ pub fn greyscale_gaussian_blur(img: &[u8], width: usize, height: usize) -> Vec<u
     for y in 0..height {
         for x in 0..width {
             let mut sum = 0.0;
-            for i in 0..KERNEL_SIZE {
-                let index =
-                    x + (y as i32 - 2 + i as i32).clamp(0, height as i32 - 1) as usize * width;
-                sum += KERNEL[i] * buffer[index];
+            for i in 0..kernel_size {
+                let index = x
+                    + (y as i32 - half_kernel + i as i32).clamp(0, height as i32 - 1) as usize
+                        * width;
+                sum += kernel[i] * buffer[index];
             }
             output[x + y * width] = sum.round() as u8;
         }
