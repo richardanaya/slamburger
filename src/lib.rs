@@ -91,7 +91,7 @@ pub unsafe fn calculate(width: usize, height: usize, slot: usize) -> usize {
 
     let mut slam = slam::Slam::new(image_a, image_b);
 
-    let (_result, matched_keypoints, keypoints_and_descriptors_a, keypoints_and_descriptors_b) =
+    let (result, matched_keypoints, keypoints_and_descriptors_a, keypoints_and_descriptors_b) =
         slam.calculate_pose();
 
     let layout = Layout::array::<KeyPoint>(keypoints_and_descriptors_a.0.len()).unwrap();
@@ -157,7 +157,15 @@ pub unsafe fn calculate(width: usize, height: usize, slot: usize) -> usize {
         matched_keypoints_flattened.len(),
     );
 
-    matched_keypoints_flattened.len()
+    if let Some(r) = result {
+        log(r.1.x as f64);
+        log(r.1.y as f64);
+        log(r.1.z as f64);
+        1
+    } else {
+        log(666.0);
+        0
+    }
 }
 
 static mut VEC_GRAYSCALE_PTR: *mut u8 = 0 as *mut u8;
