@@ -109,60 +109,78 @@
 
       if (frame1_ptr !== undefined && frame2_ptr !== undefined) {
         console.time();
-        let keypointLen = wasmInstance.instance.exports.calculate(
+        let output = wasmInstance.instance.exports.calculate(
           frame_1.width,
           frame_1.height,
           slot
         );
         console.timeEnd();
-        console.log(keypointLen);
+        console.log(output);
+
+        let keypointPtr0 = wasmInstance.instance.exports.get_keypoints_slot_0();
+        let keypointsLen0 =
+          wasmInstance.instance.exports.get_keypoints_slot_0_len();
+        let keypointData = new Float32Array(
+          wasmInstance.instance.exports.memory.buffer,
+          keypointPtr0,
+          keypointsLen0 * 3
+        );
+
+        ctx.globalAlpha = 0.5;
+        ctx.strokeStyle = "green";
+        for (let i = 0; i < keypointsLen0; i++) {
+          let x = keypointData[i * 3];
+          let y = keypointData[i * 3 + 1];
+          let orientation = keypointData[i * 3 + 2];
+
+          // draw keypoint
+          ctx.beginPath();
+          ctx.arc(x, y, 5, 0, 2 * Math.PI);
+          ctx.stroke();
+
+          // draw orientation
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(
+            x + 10 * Math.cos(orientation),
+            y + 10 * Math.sin(orientation)
+          );
+          ctx.stroke();
+        }
+
+        // now draw the second slot
+        let keypointPtr1 = wasmInstance.instance.exports.get_keypoints_slot_1();
+        let keypointsLen1 =
+          wasmInstance.instance.exports.get_keypoints_slot_1_len();
+        keypointData = new Float32Array(
+          wasmInstance.instance.exports.memory.buffer,
+          keypointPtr1,
+          keypointsLen1 * 3
+        );
+
+        ctx.globalAlpha = 0.5;
+        ctx.strokeStyle = "green";
+        for (let i = 0; i < keypointsLen1; i++) {
+          let x = keypointData[i * 3] + width;
+          let y = keypointData[i * 3 + 1];
+          let orientation = keypointData[i * 3 + 2];
+
+          // draw keypoint
+          ctx.beginPath();
+          ctx.arc(x, y, 5, 0, 2 * Math.PI);
+          ctx.stroke();
+
+          // draw orientation
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(
+            x + 10 * Math.cos(orientation),
+            y + 10 * Math.sin(orientation)
+          );
+          ctx.stroke();
+        }
       }
 
-      /*const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
-
-      let ptr = wasmInstance.instance.exports.allocate_vec(data.length);
-      // copy data to wasm memory
-      const wasmMemory = new Uint8Array(
-        wasmInstance.instance.exports.memory.buffer
-      );
-      wasmMemory.set(data, ptr);
-
-      console.time();
-      let keypointLen = wasmInstance.instance.exports.calculate(
-        canvas.width,
-        canvas.height
-      );
-      console.timeEnd();
-
-      let keypointPtr = wasmInstance.instance.exports.get_keypoints();
-      let keypointData = new Float32Array(
-        wasmInstance.instance.exports.memory.buffer,
-        keypointPtr,
-        keypointLen * 3
-      );
-
-      ctx.globalAlpha = 0.5;
-      ctx.strokeStyle = "green";
-      for (let i = 0; i < keypointLen; i++) {
-        let x = keypointData[i * 3];
-        let y = keypointData[i * 3 + 1];
-        let orientation = keypointData[i * 3 + 2];
-
-        // draw keypoint
-        ctx.beginPath();
-        ctx.arc(x, y, 5, 0, 2 * Math.PI);
-        ctx.stroke();
-
-        // draw orientation
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(
-          x + 10 * Math.cos(orientation),
-          y + 10 * Math.sin(orientation)
-        );
-        ctx.stroke();
-      }*/
       requestAnimationFrame(run);
     };
     requestAnimationFrame(run);

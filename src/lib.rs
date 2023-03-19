@@ -1,5 +1,5 @@
 use common::KeyPoint;
-use std::alloc::{alloc, dealloc, Layout};
+use std::alloc::{alloc, Layout};
 use std::slice;
 mod common;
 mod phase_1;
@@ -48,8 +48,11 @@ pub unsafe extern "C" fn allocate_slot_1(size: usize) -> *mut u8 {
     VEC_PTR_SLOT_1
 }
 
-static mut VEC_KEYPOINTS_PTR: *mut KeyPoint = 0 as *mut KeyPoint;
-static mut VEC_KEYPOINTS_LEN: usize = 0;
+static mut VEC_KEYPOINTS_SLOT_0_PTR: *mut KeyPoint = 0 as *mut KeyPoint;
+static mut VEC_KEYPOINTS_SLOT_0_LEN: usize = 0;
+
+static mut VEC_KEYPOINTS_SLOT_1_PTR: *mut KeyPoint = 0 as *mut KeyPoint;
+static mut VEC_KEYPOINTS_SLOT_1_LEN: usize = 0;
 
 #[no_mangle]
 pub unsafe fn calculate(width: usize, height: usize, slot: usize) -> usize {
@@ -79,33 +82,34 @@ pub unsafe fn calculate(width: usize, height: usize, slot: usize) -> usize {
 
     let mut slam = slam::Slam::new(image_a, image_b);
 
-    let (_result, _matched_keypoints, keypoints_and_descriptors_a, keypoints_and_descriptors_b) =
+    let (_result, matched_keypoints, keypoints_and_descriptors_a, keypoints_and_descriptors_b) =
         slam.calculate_pose();
 
-    keypoints_and_descriptors_a.0.len() - keypoints_and_descriptors_b.0.len()
-
-    /*
-
-    let (_result, matched_keypoints) = slam.calculate_pose();
-
-    // split matched_keypoints into two vectors
-    let mut keypoints_a = Vec::new();
-    let mut keypoints_b = Vec::new();
-    for (keypoint_a, keypoint_b) in matched_keypoints {
-        keypoints_a.push(keypoint_a);
-        keypoints_b.push(keypoint_b);
-    }
-
-    let layout = Layout::array::<KeyPoint>(keypoints_a.len()).unwrap();
+    let layout = Layout::array::<KeyPoint>(keypoints_and_descriptors_a.0.len()).unwrap();
     let ptr = alloc(layout) as *mut KeyPoint;
 
-    VEC_KEYPOINTS_PTR = ptr;
-    VEC_KEYPOINTS_LEN = keypoints_a.len();
+    VEC_KEYPOINTS_SLOT_0_PTR = ptr;
+    VEC_KEYPOINTS_SLOT_0_LEN = keypoints_and_descriptors_a.0.len();
 
     // copy data to the allocated memory
-    ptr.copy_from_nonoverlapping(keypoints_a.as_ptr(), keypoints_a.len());
+    ptr.copy_from_nonoverlapping(
+        keypoints_and_descriptors_a.0.as_ptr(),
+        keypoints_and_descriptors_a.0.len(),
+    );
 
-    VEC_KEYPOINTS_LEN*/
+    let layout = Layout::array::<KeyPoint>(keypoints_and_descriptors_b.0.len()).unwrap();
+    let ptr = alloc(layout) as *mut KeyPoint;
+
+    VEC_KEYPOINTS_SLOT_1_PTR = ptr;
+    VEC_KEYPOINTS_SLOT_1_LEN = keypoints_and_descriptors_b.0.len();
+
+    // copy data to the allocated memory
+    ptr.copy_from_nonoverlapping(
+        keypoints_and_descriptors_b.0.as_ptr(),
+        keypoints_and_descriptors_b.0.len(),
+    );
+
+    matched_keypoints.len()
 }
 
 /*
@@ -165,20 +169,24 @@ pub unsafe fn calculate(width: usize, height: usize) -> usize {
     ptr.copy_from_nonoverlapping(keypoints_a.as_ptr(), keypoints_a.len());
 
     VEC_KEYPOINTS_LEN
+}*/
+
+#[no_mangle]
+pub unsafe fn get_keypoints_slot_0() -> *mut KeyPoint {
+    VEC_KEYPOINTS_SLOT_0_PTR
 }
 
 #[no_mangle]
-pub unsafe fn get_keypoints() -> *mut KeyPoint {
-    VEC_KEYPOINTS_PTR
+pub unsafe fn get_keypoints_slot_0_len() -> usize {
+    VEC_KEYPOINTS_SLOT_0_LEN
 }
 
 #[no_mangle]
-pub unsafe fn get_grey_scale() -> *mut u8 {
-    VEC_GRAYSCALE_PTR
+pub unsafe fn get_keypoints_slot_1() -> *mut KeyPoint {
+    VEC_KEYPOINTS_SLOT_1_PTR
 }
 
 #[no_mangle]
-pub unsafe fn get_grey_scale_len() -> usize {
-    VEC_GRAYSCALE_LEN
+pub unsafe fn get_keypoints_slot_1_len() -> usize {
+    VEC_KEYPOINTS_SLOT_1_LEN
 }
-*/
