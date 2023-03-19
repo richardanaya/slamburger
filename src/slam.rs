@@ -98,6 +98,8 @@ impl<'a> Slam<'a> {
             &sampling_pattern,
         );
 
+        // PHASE 4  -  Match features between the two images
+
         let matched_keypoints = phase_4::match_features(
             &key_points_with_orientation_a,
             &descriptors_a,
