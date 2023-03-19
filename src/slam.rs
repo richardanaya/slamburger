@@ -28,7 +28,7 @@ impl<'a> Slam<'a> {
             random,
             patch_size: 16,
             num_pairs: 256,
-            max_hamming_distance: 32,
+            max_hamming_distance: 140,
         }
     }
 
@@ -37,7 +37,7 @@ impl<'a> Slam<'a> {
     ) -> (
         Option<(Matrix3<f32>, Vector3<f32>)>,
         Vec<(KeyPoint, KeyPoint)>,
-        (Vec<KeyPoint>, Vec<Descriptor>),
+        (Vec<KeyPoint>, Vec<Descriptor>, Vec<u8>),
         (Vec<KeyPoint>, Vec<Descriptor>),
     ) {
         let key_points_with_descriptors_a = {
@@ -46,6 +46,7 @@ impl<'a> Slam<'a> {
 
             // PHASE 1  -  Convert RGB image to greyscale and blur it with a Gaussian filter
             let greyscale = phase_1::rgb_to_grayscale(self.image_a.data, width, height);
+            let greyscale_clone = greyscale.clone();
             let blurred_img = phase_1::greyscale_gaussian_blur(&greyscale, width, height);
             let threshold: u8 = 30;
 
@@ -67,7 +68,7 @@ impl<'a> Slam<'a> {
                 &key_points_with_orientation,
                 &sampling_pattern,
             );
-            (key_points_with_orientation, descriptors)
+            (key_points_with_orientation, descriptors, greyscale_clone)
         };
 
         let key_points_with_descriptors_b = {
@@ -101,7 +102,7 @@ impl<'a> Slam<'a> {
         };
 
         // PHASE 4  -  Match features between image A and B using Hamming distance of BRIEF descriptors
-        let (keypoints_a, descriptors_a) = key_points_with_descriptors_a;
+        let (keypoints_a, descriptors_a, blurred_img) = key_points_with_descriptors_a;
         let (keypoints_b, descriptors_b) = key_points_with_descriptors_b;
 
         let matched_keypoints = phase_4::match_features(
@@ -116,7 +117,7 @@ impl<'a> Slam<'a> {
         (
             phase_5::calculate_rotation_translation(&matched_keypoints, &mut self.random),
             matched_keypoints,
-            (keypoints_a, descriptors_a),
+            (keypoints_a, descriptors_a, blurred_img),
             (keypoints_b, descriptors_b),
         )
     }

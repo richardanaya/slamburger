@@ -20,6 +20,12 @@ pub fn signal(signal: f64) {
     }
 }
 
+pub fn log(signal: f64) {
+    unsafe {
+        js_log(signal);
+    }
+}
+
 static mut VEC_PTR_SLOT_0: *mut u8 = 0 as *mut u8;
 static mut VEC_LEN_SLOT_0: usize = 0;
 
@@ -109,67 +115,40 @@ pub unsafe fn calculate(width: usize, height: usize, slot: usize) -> usize {
         keypoints_and_descriptors_b.0.len(),
     );
 
+    let grey = keypoints_and_descriptors_a.2;
+    let mut rgb_grey = vec![0; grey.len() * 4];
+
+    grey.iter().enumerate().for_each(|(i, &v)| {
+        rgb_grey[i * 4] = v;
+        rgb_grey[i * 4 + 1] = v;
+        rgb_grey[i * 4 + 2] = v;
+        rgb_grey[i * 4 + 3] = 255;
+    });
+
+    let layout = Layout::array::<u8>(rgb_grey.len()).unwrap();
+    let ptr = alloc(layout) as *mut u8;
+
+    VEC_GRAYSCALE_PTR = ptr;
+    VEC_GRAYSCALE_LEN = rgb_grey.len();
+
+    // copy data to the allocated memory
+    ptr.copy_from_nonoverlapping(rgb_grey.as_ptr(), rgb_grey.len());
+
     matched_keypoints.len()
-}
-
-/*
-#[no_mangle]
-pub unsafe extern "C" fn get_value(i: usize) -> u8 {
-    let slice = slice::from_raw_parts_mut(VEC_PTR, VEC_LEN);
-    slice[i]
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn deallocate_vec() {
-    let layout = Layout::array::<u32>(VEC_LEN).unwrap();
-    dealloc(VEC_PTR as *mut u8, layout);
 }
 
 static mut VEC_GRAYSCALE_PTR: *mut u8 = 0 as *mut u8;
 static mut VEC_GRAYSCALE_LEN: usize = 0;
 
-static mut VEC_KEYPOINTS_PTR: *mut KeyPoint = 0 as *mut KeyPoint;
-static mut VEC_KEYPOINTS_LEN: usize = 0;
+#[no_mangle]
+pub unsafe fn get_grayscale() -> *mut u8 {
+    VEC_GRAYSCALE_PTR
+}
 
 #[no_mangle]
-pub unsafe fn calculate(width: usize, height: usize) -> usize {
-    let slice = slice::from_raw_parts_mut(VEC_PTR, VEC_LEN);
-
-    let image_a = common::Image {
-        data: slice,
-        width,
-        height,
-    };
-
-    let image_b = common::Image {
-        data: slice,
-        width,
-        height,
-    };
-
-    let mut slam = slam::Slam::new(image_a, image_b);
-
-    let (_result, matched_keypoints) = slam.calculate_pose();
-
-    // split matched_keypoints into two vectors
-    let mut keypoints_a = Vec::new();
-    let mut keypoints_b = Vec::new();
-    for (keypoint_a, keypoint_b) in matched_keypoints {
-        keypoints_a.push(keypoint_a);
-        keypoints_b.push(keypoint_b);
-    }
-
-    let layout = Layout::array::<KeyPoint>(keypoints_a.len()).unwrap();
-    let ptr = alloc(layout) as *mut KeyPoint;
-
-    VEC_KEYPOINTS_PTR = ptr;
-    VEC_KEYPOINTS_LEN = keypoints_a.len();
-
-    // copy data to the allocated memory
-    ptr.copy_from_nonoverlapping(keypoints_a.as_ptr(), keypoints_a.len());
-
-    VEC_KEYPOINTS_LEN
-}*/
+pub unsafe fn get_grayscale_len() -> usize {
+    VEC_GRAYSCALE_LEN
+}
 
 #[no_mangle]
 pub unsafe fn get_keypoints_slot_0() -> *mut KeyPoint {

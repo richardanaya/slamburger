@@ -3,9 +3,6 @@
   const bufferSource = await response.arrayBuffer();
   const wasmInstance = await WebAssembly.instantiate(bufferSource, {
     env: {
-      allocate_vec: function (size) {
-        wasmInstance.exports.allocate_vec(size);
-      },
       get_value: function (index) {
         return wasmInstance.exports.get_value(index);
       },
@@ -80,7 +77,7 @@
       ctx.drawImage(frame_2, width, 0);
 
       if (slot === 0) {
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, frame_1.width, frame_1.height);
         const data = imageData.data;
         if (frame1_ptr === undefined) {
           frame1_ptr = wasmInstance.instance.exports.allocate_slot_0(
@@ -93,7 +90,7 @@
         wasmMemory.set(data, frame1_ptr);
         slot = 1;
       } else {
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, frame_2.width, frame_2.height);
         const data = imageData.data;
         if (frame2_ptr === undefined) {
           frame2_ptr = wasmInstance.instance.exports.allocate_slot_1(
@@ -116,6 +113,23 @@
         );
         console.timeEnd();
         console.log(output);
+
+        let greyPtr = wasmInstance.instance.exports.get_grayscale();
+        let greyLen = wasmInstance.instance.exports.get_grayscale_len();
+
+        let greyData = new Uint8Array(
+          wasmInstance.instance.exports.memory.buffer,
+          greyPtr,
+          greyLen
+        );
+
+        let greyImageData = new ImageData(
+          new Uint8ClampedArray(greyData),
+          frame_1.width,
+          frame_1.height
+        );
+
+        ctx.putImageData(greyImageData, 0, 0);
 
         let keypointPtr0 = wasmInstance.instance.exports.get_keypoints_slot_0();
         let keypointsLen0 =
