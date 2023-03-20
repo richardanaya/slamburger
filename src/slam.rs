@@ -7,6 +7,7 @@ use crate::phase_2;
 use crate::phase_3;
 use crate::phase_4;
 use crate::phase_5;
+use crate::phase_6;
 use crate::rand::*;
 
 pub struct Slam<'a> {
@@ -17,6 +18,8 @@ pub struct Slam<'a> {
     num_pairs: usize,
     max_hamming_distance: usize,
     blur_radius: f32,
+    essential_num_iterations: usize,
+    essential_threshold: f32,
 }
 
 impl<'a> Slam<'a> {
@@ -31,13 +34,15 @@ impl<'a> Slam<'a> {
             num_pairs: 500,
             max_hamming_distance: 300,
             blur_radius: 3.0,
+            essential_num_iterations: 1000,
+            essential_threshold: 0.01,
         }
     }
 
     pub fn calculate_pose(
         &mut self,
     ) -> (
-        Option<(Matrix3<f32>, Vector3<f32>)>,
+        Option<(Matrix3<f64>, Vector3<f64>)>,
         Vec<(KeyPoint, KeyPoint)>,
         (Vec<KeyPoint>, Vec<Descriptor>, Vec<u8>),
         (Vec<KeyPoint>, Vec<Descriptor>),
@@ -109,8 +114,22 @@ impl<'a> Slam<'a> {
         );
 
         // PHASE 5  -  RANSAC to find the best rotation and translation using 8 point algorithm
+        let essential_matrix = phase_5::estimate_essential_ransac(
+            &matched_keypoints,
+            *&self.essential_num_iterations,
+            *&self.essential_threshold as f64,
+            &mut self.random,
+        );
+
+        // PHASE 6  -  Decompose the essential matrix to find the rotation and translation
+        let decomposed_essential = if let Some(essential) = essential_matrix {
+            Some(phase_6::decompose_essential_matrix(essential))
+        } else {
+            None
+        };
+
         (
-            phase_5::calculate_rotation_translation(&matched_keypoints, &mut self.random),
+            decomposed_essential,
             matched_keypoints,
             (
                 key_points_with_orientation_a,

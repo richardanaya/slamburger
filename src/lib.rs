@@ -7,24 +7,9 @@ mod phase_2;
 mod phase_3;
 mod phase_4;
 mod phase_5;
+mod phase_6;
 mod rand;
 mod slam;
-
-extern "C" {
-    fn js_log(a: f64) -> f64;
-}
-
-pub fn signal(signal: f64) {
-    unsafe {
-        js_log(signal);
-    }
-}
-
-pub fn log(signal: f64) {
-    unsafe {
-        js_log(signal);
-    }
-}
 
 static mut VEC_PTR_SLOT_0: *mut u8 = 0 as *mut u8;
 static mut VEC_LEN_SLOT_0: usize = 0;
@@ -158,12 +143,8 @@ pub unsafe fn calculate(width: usize, height: usize, slot: usize) -> usize {
     );
 
     if let Some(r) = result {
-        log(r.1.x as f64);
-        log(r.1.y as f64);
-        log(r.1.z as f64);
         1
     } else {
-        log(666.0);
         0
     }
 }

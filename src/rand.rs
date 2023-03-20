@@ -12,6 +12,12 @@ impl Rand {
         self.0
     }
 
+    pub fn next_max(&mut self, max_to_stay_below: usize) -> usize {
+        let max = max_to_stay_below as u64;
+        let rand = self.next() % max;
+        rand as usize
+    }
+
     pub fn gen_range(&mut self, range: RangeInclusive<f32>) -> f32 {
         let min = *range.start();
         let max = *range.end();

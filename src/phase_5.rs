@@ -1,132 +1,92 @@
-use crate::common::KeyPoint;
-use crate::rand::ChooseMultiple;
-use crate::rand::Rand;
-use nalgebra::{Matrix3, Vector3, SVD};
+use nalgebra::{DMatrix, Matrix3, Vector3, SVD};
 
-pub fn calculate_rotation_translation(
-    keypoints: &[(KeyPoint, KeyPoint)],
-    rnd: &mut Rand,
-) -> Option<(Matrix3<f32>, Vector3<f32>)> {
-    let e = ransac_essential_matrix(&keypoints, 0.01, 1000, rnd)?;
+use crate::common::*;
+use crate::rand::*;
 
-    // Decompose essential matrix using SVD
-    let svd = SVD::new(e, true, true);
-    let u = svd.u.unwrap();
-    let v_t = svd.v_t.unwrap();
-    let w = Matrix3::new(0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+fn keypoints_to_essential(keypoints: &[(KeyPoint, KeyPoint)]) -> Matrix3<f64> {
+    // Construct a matrix A from the keypoints
+    let mut a = DMatrix::<f64>::zeros(keypoints.len(), 9);
+    for (i, &(ref p1, ref p2)) in keypoints.iter().enumerate() {
+        a[(i, 0)] = p1.x as f64 * p2.x as f64;
+        a[(i, 1)] = p1.y as f64 * p2.x as f64;
+        a[(i, 2)] = p2.x as f64;
+        a[(i, 3)] = p1.x as f64 * p2.y as f64;
+        a[(i, 4)] = p1.y as f64 * p2.y as f64;
+        a[(i, 5)] = p2.y as f64;
+        a[(i, 6)] = p1.x as f64;
+        a[(i, 7)] = p1.y as f64;
+        a[(i, 8)] = 1.0;
+    }
 
-    let r1 = u * w * v_t;
-    let r2 = u * w.transpose() * v_t;
+    // Compute the singular value decomposition of A
+    let svd = a.svd(true, true);
 
-    let t = u.column(2);
+    // Extract the singular values and vectors
+    let v = svd.v_t.unwrap();
 
-    // Choose the correct rotation matrix based on the determinant
-    let rotation = if r1.determinant() > 0.0 && r2.determinant() > 0.0 {
-        if (r1 - r2).norm() < 1e-6 {
-            r1
-        } else {
-            // Ambiguity in the correct rotation matrix
-            return None;
-        }
-    } else if r1.determinant() > 0.0 {
-        r1
-    } else if r2.determinant() > 0.0 {
-        r2
-    } else {
-        // Both rotation matrices have a negative determinant
-        return None;
-    };
+    // Extract the nullspace of A (i.e., the last column of V)
+    let e_vec = v.column(8);
 
-    Some((rotation, t.into()))
+    // Reshape the nullspace vector into a 3x3 matrix
+    let essential_matrix = Matrix3::from_row_slice(&[
+        e_vec[0], e_vec[1], e_vec[2], e_vec[3], e_vec[4], e_vec[5], e_vec[6], e_vec[7], e_vec[8],
+    ]);
+
+    essential_matrix
 }
 
-fn ransac_essential_matrix(
-    keypoints: &[(KeyPoint, KeyPoint)],
-    threshold: f32,
-    iterations: usize,
+fn choose_multiple_keypoints(
+    key_points: &Vec<(KeyPoint, KeyPoint)>,
+    num_keypoints: usize,
+    random: &mut Rand,
+) -> Vec<(KeyPoint, KeyPoint)> {
+    key_points.choose_multiple(random, num_keypoints)
+}
+
+pub fn estimate_essential_ransac(
+    key_points: &Vec<(KeyPoint, KeyPoint)>,
+    num_iterations: usize,
+    inlier_threshold: f64,
     rnd: &mut Rand,
-) -> Option<Matrix3<f32>> {
-    let n = keypoints.len();
-    if n < 8 {
+) -> Option<Matrix3<f64>> {
+    if key_points.len() < 8 {
         return None;
     }
+    let mut best_essential_matrix = None;
+    let mut best_num_inliers = 0;
 
-    let mut best_e = None;
-    let mut best_inliers = Vec::new();
+    for _ in 0..num_iterations {
+        // Choose a random subset of keypoints
+        let subset = choose_multiple_keypoints(key_points, 8, rnd);
 
-    for _ in 0..iterations {
-        // 1. Randomly select a subset of 8 keypoint pairs
-        let subset_indices: Vec<usize> = (0..n).collect();
-        let subset_indices = subset_indices.choose_multiple(rnd, 8);
+        // Compute the essential matrix using the 8-point algorithm
+        let essential_matrix = keypoints_to_essential(&subset);
 
-        let kps1_subset: Vec<KeyPoint> = subset_indices.iter().map(|&i| keypoints[i].0).collect();
-        let kps2_subset: Vec<KeyPoint> = subset_indices.iter().map(|&i| keypoints[i].1).collect();
+        // Compute the number of inliers that are consistent with the essential matrix
+        let mut num_inliers = 0;
+        for &(ref p1, ref p2) in key_points.iter() {
+            // Compute the epipolar lines corresponding to each keypoint
+            let l1 = essential_matrix * Vector3::new(p2.x as f64, p2.y as f64, 1.0);
+            let l2 = essential_matrix.transpose() * Vector3::new(p1.x as f64, p1.y as f64, 1.0);
 
-        // 2. Compute the essential matrix using the selected subsetm
-        if let Some(e) = compute_essential_matrix(&kps1_subset, &kps2_subset) {
-            // 3. Evaluate the number of inliers
-            let mut inliers = Vec::new();
-            for i in 0..n {
-                let x1 = keypoints[i].0.x;
-                let y1 = keypoints[i].0.y;
-                let x2 = keypoints[i].1.x;
-                let y2 = keypoints[i].1.y;
+            // Compute the reprojection error for each key
+            let error1 = (l1.dot(&Vector3::new(p1.x as f64, p1.y as f64, 1.0))).abs()
+                / (l1[0].powi(2) + l1[1].powi(2)).sqrt();
+            let error2 = (l2.dot(&Vector3::new(p2.x as f64, p2.y as f64, 1.0))).abs()
+                / (l2[0].powi(2) + l2[1].powi(2)).sqrt();
 
-                let p1 = Vector3::new(x1, y1, 1.0);
-                let p2 = Vector3::new(x2, y2, 1.0);
-                let error = p2.transpose() * e * p1;
-
-                if *error.abs().get(0).unwrap() < threshold {
-                    inliers.push(i);
-                }
+            // If the sum of the errors is below the inlier threshold, count this as an inlier
+            if error1 + error2 < inlier_threshold {
+                num_inliers += 1;
             }
+        }
 
-            // 4. Update the best model if the current model has more inliers
-            if inliers.len() > best_inliers.len() {
-                best_e = Some(e);
-                best_inliers = inliers;
-            }
+        // If this solution has more inliers than any previous solution, update the best estimate
+        if num_inliers > best_num_inliers {
+            best_essential_matrix = Some(essential_matrix);
+            best_num_inliers = num_inliers;
         }
     }
 
-    // 5. Refine the essential matrix using the best inliers
-    if let Some(_) = best_e {
-        let kps1_inliers: Vec<KeyPoint> = best_inliers.iter().map(|&i| keypoints[i].0).collect();
-        let kps2_inliers: Vec<KeyPoint> = best_inliers.iter().map(|&i| keypoints[i].1).collect();
-        return compute_essential_matrix(&kps1_inliers, &kps2_inliers);
-    }
-    // getting here and don't know why ...
-    None
-}
-
-fn compute_essential_matrix(kps1: &[KeyPoint], kps2: &[KeyPoint]) -> Option<Matrix3<f32>> {
-    // Assuming keypoints are normalized, i.e., intrinsic matrix is identity
-
-    let n = kps1.len();
-    if n < 8 || n != kps2.len() {
-        return None;
-    }
-
-    let mut a = Matrix3::<f32>::zeros();
-
-    for i in 0..n {
-        let x1 = kps1[i].x;
-        let y1 = kps1[i].y;
-        let x2 = kps2[i].x;
-        let y2 = kps2[i].y;
-
-        a += Matrix3::new(x1 * x2, x1 * y2, x1, y1 * x2, y1 * y2, y1, x2, y2, 1.0);
-    }
-
-    let svd = SVD::new(a, true, true);
-    let mut e = svd.u.unwrap() * svd.v_t.unwrap();
-
-    // Enforce the rank-2 constraint on the essential matrix
-    let svd_e = SVD::new(e.clone(), true, true);
-    let mut s = svd_e.singular_values;
-    s[2] = 0.0;
-    let s_diag = Matrix3::from_diagonal(&s);
-    e = svd_e.u.unwrap() * s_diag * svd_e.v_t.unwrap();
-
-    Some(e)
+    best_essential_matrix
 }

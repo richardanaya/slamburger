@@ -5,6 +5,7 @@ pub struct KeyPoint {
     pub y: f32,
     pub orientation: f32,
 }
+
 #[derive(PartialEq, Debug, Clone)]
 pub struct Descriptor(pub Vec<u8>);
 
