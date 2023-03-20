@@ -1,3 +1,19 @@
+let total_frames = 0;
+let average_fps = 0;
+let last_time = 0;
+
+// function to keep average fps
+function update_fps() {
+  total_frames++;
+  const now = performance.now();
+  const delta = now - last_time;
+  if (delta > 1000) {
+    average_fps = total_frames / (delta / 1000);
+    total_frames = 0;
+    last_time = now;
+  }
+}
+
 (async function () {
   const response = await fetch("slamburger.wasm");
   const bufferSource = await response.arrayBuffer();
@@ -220,6 +236,13 @@
         ctx.stroke();
       }
 
+      // draw fps
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "white";
+      ctx.font = "20px Arial";
+      ctx.fillText("FPS: " + average_fps.toFixed(0), 10, 30);
+
+      update_fps();
       requestAnimationFrame(run);
     };
     requestAnimationFrame(run);
