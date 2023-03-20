@@ -105,11 +105,13 @@
       }
 
       if (frame1_ptr !== undefined && frame2_ptr !== undefined) {
-        wasmInstance.instance.exports.calculate(
+        const result = wasmInstance.instance.exports.calculate(
           frame_1.width,
           frame_1.height,
           slot
         );
+
+        console.log(result);
 
         let greyPtr = wasmInstance.instance.exports.get_grayscale();
         let greyLen = wasmInstance.instance.exports.get_grayscale_len();

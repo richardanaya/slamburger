@@ -57,7 +57,7 @@ pub fn estimate_essential_ransac(
 
     for _ in 0..num_iterations {
         // Choose a random subset of keypoints
-        let subset = choose_multiple_keypoints(key_points, 8, rnd);
+        let subset = choose_multiple_keypoints(key_points, 9, rnd);
 
         // Compute the essential matrix using the 8-point algorithm
         let essential_matrix = keypoints_to_essential(&subset);

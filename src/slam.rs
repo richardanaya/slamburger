@@ -34,7 +34,7 @@ impl<'a> Slam<'a> {
             num_pairs: 500,
             max_hamming_distance: 300,
             blur_radius: 3.0,
-            essential_num_iterations: 1000,
+            essential_num_iterations: 100,
             essential_threshold: 0.01,
         }
     }
