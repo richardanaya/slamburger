@@ -40,11 +40,14 @@ where
     T: Clone,
 {
     fn choose_multiple(&self, rng: &mut Rand, n: usize) -> Self {
-        let mut result = Vec::new();
+        // choose multiple and don't repeat
+        let mut chosen = Vec::with_capacity(n);
+        let mut indices = (0..self.len()).collect::<Vec<_>>();
         for _ in 0..n {
-            let index = rng.next() as usize % self.len();
-            result.push(self[index].clone());
+            let index = rng.next_max(indices.len());
+            let index = indices.remove(index);
+            chosen.push(self[index].clone());
         }
-        result
+        chosen
     }
 }
