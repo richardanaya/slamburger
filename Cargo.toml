@@ -4,6 +4,7 @@ version = "0.0.0"
 edition = "2021"
 license = "MIT"
 description = "A simple, learnable SLAM library for WebAssembly"
+repository = "https://github.com/richardanaya/slamburger"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
